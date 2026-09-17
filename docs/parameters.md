@@ -52,9 +52,10 @@ worth naming, because it is easy to make.
 | Peak dopamine in a compartment | 0.3–0.5 µM | measured | Shin & Venton 2022, *Angew Chem* 61:e202207399 (feeding and cholinergic stimulation, adult mushroom body) |
 | Half-decay of the transient | 1.4–2.7 s | measured | same |
 | Transporter K_m | 1.3 µM | measured | Vickrey et al. 2013, *ACS Chem Neurosci* 4:832 (larval, diffusion-corrected). No adult value exists |
-| Transporter V_max | 0.45 µM/s | **calibrated** | set so V_max/K_m reproduces the adult half-decay. The measured larval V_max of 0.11 µM/s gives ~12 s, far slower than the adult brain shows |
-| Release per spike | 0.0053 µM | **calibrated** | so that 20 Hz firing of one typical neuron holds ~0.4 µM |
-| Release per neuron | scaled by synapse count | measured (anatomy) | number of synapses onto Kenyon cells in the compartment, from the connectome, normalised to the median |
+| Transporter V_max | 0.30 µM/s | **calibrated** | set so that uptake plus diffusion reproduce the adult half-decay. The measured larval V_max of 0.11 µM/s alone gives ~12 s, far slower than the adult brain shows |
+| Diffusion out of the compartment | 0.12 s⁻¹ | **assumed** | uptake alone saturates at V_max, so a compartment driven harder than that would accumulate dopamine without bound. Transporter-null flies still clear dopamine (Makos et al. 2010), so this term cannot be zero; the split between uptake and diffusion is not measured |
+| Release per spike | 0.0059 µM | **calibrated** | so that 20 Hz firing of a compartment's dopaminergic population holds ~0.4 µM |
+| Release per neuron | share of the compartment's synapses onto Kenyon cells | measured (anatomy) | from the connectome; the shares within a compartment sum to one, so the calibration applies to compartments rather than to a single neuron |
 
 ## Intracellular signalling
 
@@ -74,7 +75,8 @@ worth naming, because it is easy to make.
 | Depression magnitude target | 90 ± 4% of the response, one pairing | measured | Hige et al. 2015 |
 | Control-odour loss | ~25% | measured | same; caused by shared Kenyon cells, not by an unspecific rule |
 | Depression persistence | ≥ 40 min | measured | same |
-| Depression / potentiation rates | calibrated | **calibrated** | fitted to the two numbers above in `experiments/conditioning.py` |
+| Depression rate | 1.2 per second | **calibrated** | fitted so one pairing removes ~90% of the trained synapses' weight, the synaptic measurement of Hige et al. 2015 |
+| Potentiation rate | 0.6 per second | **assumed** | only the existence and sign of the potentiating arm are measured (Handler et al. 2019), not its size; set to half the depression rate |
 | Weight bounds | 0 to 1.5 × anatomical | assumed | physiological bounds are unmeasured |
 | Passive forgetting | off | measured (as a choice) | forgetting in the fly is dopamine-driven through Dop1R2, not passive decay: Berry et al. 2012, *Neuron* 74:530 |
 
