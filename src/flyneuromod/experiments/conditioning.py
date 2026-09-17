@@ -14,7 +14,8 @@ because the two odours share Kenyon cells, not because the rule is unspecific.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from typing import Any
 
 import numpy as np
 
@@ -33,7 +34,14 @@ class ConditioningProtocol:
     Attributes
     ----------
     odour_duration:
-        Length of each odour presentation in seconds.
+        Length of the odour presentation during pairing, in seconds. Dopamine
+        signalling is slow - receptor activation and cAMP both have time
+        constants of seconds - so a pairing that lasts a few hundred milliseconds
+        barely moves cAMP. The behavioural experiments use a 60 s odour with
+        thirty 1 s dopaminergic pulses (Aso & Rubin 2016); five seconds is the
+        compressed version of that.
+    test_duration:
+        Length of an odour presentation used to measure the response, in seconds.
     odour_rate:
         Drive rate applied to the Kenyon cells of the odour, in hertz.
     dopamine_rate:
@@ -46,11 +54,20 @@ class ConditioningProtocol:
     n_pairings:
         Number of pairing trials.
     rest:
-        Pause after pairing before testing, in seconds; lets dopamine and cAMP
-        return to baseline so the test itself writes nothing. cAMP relaxes with
-        a time constant of several seconds, so this has to be long: with a short
-        pause the first test odour is still bathed in cAMP and gets trained too,
-        which shows up as a spurious loss for the control odour.
+        Pause between every phase of the experiment, in seconds. It has to be
+        long compared with both the eligibility trace and cAMP, for two separate
+        reasons: a test odour presented while cAMP is still high would be trained
+        by accident, and a test odour presented shortly *before* the pairing
+        would still carry its eligibility trace when dopamine arrives, and be
+        trained as well. The second mistake is easy to miss - it shows up only as
+        a control odour that looks almost as depressed as the trained one.
+    readout_baseline_rate:
+        Spontaneous firing rate the output neuron is held at, in hertz. The
+        subnetwork removes every input the neuron receives from outside the
+        mushroom body, which leaves it sitting at rest and firing only when the
+        odour drive pushes it just past threshold - a regime where any loss of
+        input looks catastrophic. A tonic drive is fitted to restore a realistic
+        operating point. It is a calibration knob, not a measurement.
     odour_fraction:
         Fraction of Kenyon cells each odour activates.
     odour_overlap:
@@ -59,52 +76,70 @@ class ConditioningProtocol:
         depression of the control odour.
     """
 
-    odour_duration: float = 1.0
-    odour_rate: float = 150.0
+    odour_duration: float = 5.0
+    test_duration: float = 1.0
+    odour_rate: float = 60.0
     dopamine_rate: float = 20.0
     dopamine_onset: float = 0.2
-    dopamine_duration: float = 1.0
+    dopamine_duration: float = 5.0
     n_pairings: int = 1
-    rest: float = 25.0
+    rest: float = 15.0
+    readout_baseline_rate: float = 30.0
     odour_fraction: float = 0.1
     odour_overlap: float = 0.2
 
     def __post_init__(self) -> None:
-        if self.odour_duration <= 0 or self.dopamine_duration <= 0:
+        if self.odour_duration <= 0 or self.dopamine_duration <= 0 or self.test_duration <= 0:
             raise ValueError("durations must be positive")
         if self.n_pairings < 1:
             raise ValueError("at least one pairing is required")
         if not 0 <= self.odour_overlap <= 1:
             raise ValueError("odour_overlap must be a fraction")
 
+    def evolve(self, **changes: Any) -> ConditioningProtocol:
+        """Return a copy of the protocol with ``changes`` applied."""
+        return replace(self, **changes)
+
 
 @dataclass(frozen=True, slots=True)
 class ConditioningResult:
     """Output neuron responses before and after pairing, in hertz."""
 
+    baseline: float
     trained_before: float
     trained_after: float
     control_before: float
     control_after: float
     weight_change: float
+    trained_weight_change: float
     compartment: str
 
     @property
     def trained_depression(self) -> float:
-        """Fractional loss of the trained odour response (1.0 = abolished)."""
-        return _fractional_loss(self.trained_before, self.trained_after)
+        """Fractional loss of the odour-evoked response (1.0 = abolished).
+
+        Evoked means above the spontaneous rate: what an experimenter measures
+        as the odour response.
+        """
+        return _fractional_loss(
+            self.trained_before - self.baseline, self.trained_after - self.baseline
+        )
 
     @property
     def control_depression(self) -> float:
-        return _fractional_loss(self.control_before, self.control_after)
+        return _fractional_loss(
+            self.control_before - self.baseline, self.control_after - self.baseline
+        )
 
     def summary(self) -> str:
         return (
-            f"{self.compartment}: trained {self.trained_before:.1f} -> {self.trained_after:.1f} Hz "
+            f"{self.compartment} (baseline {self.baseline:.0f} Hz): "
+            f"trained {self.trained_before:.1f} -> {self.trained_after:.1f} Hz "
             f"({100 * self.trained_depression:.0f}% loss), "
             f"control {self.control_before:.1f} -> {self.control_after:.1f} Hz "
             f"({100 * self.control_depression:.0f}% loss), "
-            f"synaptic weight {100 * self.weight_change:+.0f}%"
+            f"trained synapses {100 * self.trained_weight_change:+.0f}%, "
+            f"compartment {100 * self.weight_change:+.0f}%"
         )
 
 
@@ -167,8 +202,12 @@ def run_conditioning(
     if dans.size == 0:
         raise ValueError(f"no {dan_type} in this subnetwork")
 
+    baseline = _restore_operating_point(network, layer, readout, protocol)
+
     trained_before = _present_odour(network, layer, trained_odour, readout, protocol)
+    _rest(network, layer, protocol.rest)
     control_before = _present_odour(network, layer, control_odour, readout, protocol)
+    _rest(network, layer, protocol.rest)
 
     for _ in range(protocol.n_pairings):
         _pair(network, layer, trained_odour, dans, protocol)
@@ -178,16 +217,55 @@ def run_conditioning(
     _rest(network, layer, protocol.rest)
     control_after = _present_odour(network, layer, control_odour, readout, protocol)
 
+    trained_slots = np.flatnonzero(np.isin(layer.targets.kenyon_index, trained_odour))
     result = ConditioningResult(
+        baseline=baseline,
         trained_before=trained_before,
         trained_after=trained_after,
         control_before=control_before,
         control_after=control_after,
         weight_change=layer.weight_change(compartment),
+        trained_weight_change=layer.weight_change_of_cells(trained_slots, compartment),
         compartment=compartment,
     )
     logger.info(result.summary())
     return result
+
+
+def _restore_operating_point(
+    network: LIFNetwork,
+    layer: DopamineLayer,
+    readout: np.ndarray,
+    protocol: ConditioningProtocol,
+) -> float:
+    """Fit a tonic drive so the readout neurons fire at the target baseline rate.
+
+    Returns the spontaneous rate actually reached, which the response
+    measurements are taken relative to.
+    """
+    if protocol.readout_baseline_rate <= 0:
+        return 0.0
+
+    def rate_at(drive: float) -> float:
+        network.set_tonic_drive({int(i): drive for i in readout})
+        network.reset_state()
+        network.set_poisson_drives({})
+        trains = network.run(0.5, callbacks=[layer])
+        return float(trains.rates()[readout].mean())
+
+    low, high = 0.0, 1.0
+    while rate_at(high) < protocol.readout_baseline_rate and high < 64.0:
+        high *= 2
+    for _ in range(12):
+        middle = 0.5 * (low + high)
+        if rate_at(middle) < protocol.readout_baseline_rate:
+            low = middle
+        else:
+            high = middle
+    network.set_tonic_drive({int(i): high for i in readout})
+    reached = rate_at(high)
+    logger.info("readout tonic drive %.3f V/s gives %.1f Hz spontaneous", high, reached)
+    return reached
 
 
 def _overlapping_odour(
@@ -214,7 +292,7 @@ def _present_odour(
     """Present an odour and return the mean firing rate of the readout neurons."""
     network.reset_state()
     network.set_poisson_drives({int(i): PoissonDrive(rate=protocol.odour_rate) for i in odour})
-    trains = network.run(protocol.odour_duration, callbacks=[layer])
+    trains = network.run(protocol.test_duration, callbacks=[layer])
     rates = trains.rates()
     return float(rates[readout].mean())
 

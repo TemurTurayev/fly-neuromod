@@ -59,7 +59,9 @@ def test_competitive_antagonist_shifts_the_dose_response():
 
 
 def test_receptor_knockout_removes_the_response():
-    population = ReceptorPopulation(spec(), n_cells=2, dt=1e-3, occupancy_scale=np.array([1.0, 0.0]))
+    population = ReceptorPopulation(
+        spec(), n_cells=2, dt=1e-3, occupancy_scale=np.array([1.0, 0.0])
+    )
     for _ in range(5_000):
         population.step(np.array([10.0, 10.0]))
     assert population.occupancy[0] > 0.8

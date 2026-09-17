@@ -42,9 +42,11 @@ class PlasticityParams:
         Decay time constant of the presynaptic eligibility trace (seconds). It
         sets how long after an odour dopamine can still write a memory.
     rate_depression:
-        Depression rate per unit of (cAMP x eligibility) per second.
+        Fraction of the weight lost per second at full cAMP and a fresh
+        eligibility trace.
     rate_potentiation:
-        Potentiation rate per unit of (calcium x presynaptic spike).
+        Fraction of the weight gained per second at full calcium while the
+        presynaptic cell is firing.
     min_fraction, max_fraction:
         Bounds on the synaptic weight as a fraction of its anatomical value.
     tau_recovery:
@@ -149,17 +151,23 @@ class SynapticPlasticity:
         camp_here = np.asarray(camp, dtype=np.float64)[self.compartment_index]
         calcium_here = np.asarray(calcium, dtype=np.float64)[self.compartment_index]
 
-        # presynaptic activity leaves a decaying trace; dopamine arriving while
-        # the trace is up depresses the synapse (forward pairing)
+        # A Kenyon cell answers an odour with a handful of spikes, so what marks
+        # a synapse as eligible is *that* the cell fired, not how often. The
+        # trace therefore saturates at one instead of counting spikes; otherwise
+        # the amount learned would scale with an arbitrary stimulation rate.
+        active = np.minimum(spikes, 1.0)
+
+        # dopamine arriving while the trace is up depresses the synapse
+        # (forward pairing), using the trace from before this step's spikes
         self.eligibility *= self._eligibility_decay
         depression = self.params.rate_depression * np.maximum(camp_here, 0.0) * self.eligibility
-        self.eligibility += spikes
+        self.eligibility += (1.0 - self.eligibility) * active
 
         # dopamine that arrived first leaves calcium elevated; Kenyon cell
         # spikes landing in that window potentiate instead (backward pairing)
-        potentiation = self.params.rate_potentiation * np.maximum(calcium_here, 0.0) * spikes
+        potentiation = self.params.rate_potentiation * np.maximum(calcium_here, 0.0) * active
 
-        self.weight_factor += potentiation - self.dt * depression
+        self.weight_factor += self.dt * (potentiation - depression)
         if self.params.tau_recovery is not None:
             self.weight_factor += self.dt * (1.0 - self.weight_factor) / self.params.tau_recovery
         np.clip(

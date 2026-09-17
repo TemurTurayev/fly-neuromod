@@ -131,6 +131,10 @@ class LIFNetwork:
         self._poisson_lambda = np.zeros(0, dtype=np.float64)
         self._poisson_weight = np.zeros(0, dtype=np.float64)
 
+        # tonic synaptic drive in volts per second, standing in for the input a
+        # neuron receives from outside the simulated subnetwork
+        self.tonic_drive = np.zeros(self.n_neurons, dtype=np.float64)
+
     # ------------------------------------------------------------------
     # configuration
     # ------------------------------------------------------------------
@@ -155,6 +159,21 @@ class LIFNetwork:
             [d.weight(self.params) for d in drives.values()], dtype=np.float64
         )
         self._refractory_steps[targets] = 0
+
+    def set_tonic_drive(self, drives: dict[int, float]) -> None:
+        """Set a constant synaptic drive for some neurons, in volts per second.
+
+        Extracting a subnetwork removes every input a neuron receives from the
+        rest of the brain. Without replacing it, neurons sit at rest and the
+        circuit only works when driven far harder than the animal drives it. A
+        tonic term restores a realistic operating point; it is a calibration
+        knob, not a measurement, and belongs in the record as such.
+        """
+        self.tonic_drive[:] = 0.0
+        for index, value in drives.items():
+            if not 0 <= index < self.n_neurons:
+                raise IndexError(f"neuron {index} outside the network")
+            self.tonic_drive[index] = float(value)
 
     def silence(self, indices: Sequence[int] | np.ndarray) -> None:
         """Set all outgoing weights of ``indices`` to zero (optogenetic silencing).
@@ -201,6 +220,7 @@ class LIFNetwork:
         arriving = self._delay_buffer[self._buffer_pos]
         g += arriving
         arriving[:] = 0.0
+        g += self.tonic_drive * self.params.dt
 
         # external Poisson drive acts directly on the membrane potential
         if self._poisson_targets.size:
@@ -218,7 +238,9 @@ class LIFNetwork:
         self._step += 1
         return spiking
 
-    def outgoing_synapses(self, pre_indices: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def outgoing_synapses(
+        self, pre_indices: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Locate the synapses leaving a set of neurons.
 
         Parameters

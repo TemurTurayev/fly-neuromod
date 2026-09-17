@@ -9,12 +9,12 @@ from flyneuromod.neuromod.plasticity import PlasticityParams, SynapticPlasticity
 def make_plasticity(n_synapses=2, presyn=(0, 1), compartment=(0, 1), **kwargs) -> tuple:
     """Two synapses from two Kenyon cells into two different compartments."""
     weights = np.array([10.0, 10.0])
-    # rates chosen so that one pairing depresses by ~30-40%, the range reported
-    # for KC->MBON synapses after odour-dopamine pairing (Hige et al. 2015)
+    # rates are fractions of the weight per second: ~0.8/s depresses by about a
+    # third during half a second of dopamine
     params = PlasticityParams(
         tau_eligibility=kwargs.pop("tau_eligibility", 5.0),
-        rate_depression=kwargs.pop("rate_depression", 0.008),
-        rate_potentiation=kwargs.pop("rate_potentiation", 0.004),
+        rate_depression=kwargs.pop("rate_depression", 0.8),
+        rate_potentiation=kwargs.pop("rate_potentiation", 0.4),
         **kwargs,
     )
     plasticity = SynapticPlasticity(
@@ -109,7 +109,7 @@ def test_negative_weights_keep_their_sign():
         synapse_index=np.array([0]),
         presynaptic_index=np.array([0]),
         compartment_index=np.array([0]),
-        params=PlasticityParams(tau_eligibility=5.0, rate_depression=0.008, rate_potentiation=0.0),
+        params=PlasticityParams(tau_eligibility=5.0, rate_depression=0.8, rate_potentiation=0.0),
         dt=1e-3,
     )
     for _ in range(100):

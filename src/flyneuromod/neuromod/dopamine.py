@@ -104,8 +104,9 @@ class DopamineTargets:
     dan_compartment:
         Compartment index for each of them.
     dan_release_weight:
-        Relative release strength, proportional to the number of synapses the
-        neuron makes onto Kenyon cells in its compartment.
+        Share of its compartment's release contributed by each neuron,
+        proportional to its synapses onto Kenyon cells there; the shares of a
+        compartment sum to one.
     kenyon_index:
         Network indices of Kenyon cells.
     synapse_position:
@@ -262,7 +263,10 @@ class DopamineLayer:
         synapse_presynaptic_slot = kenyon_slot[presynaptic[is_plastic]]
 
         dan_index_array = np.array(dan_index, dtype=np.int64)
-        release_weight = self._release_weights(dan_index_array, kenyon_index)
+        dan_compartment_array = np.array(dan_compartment, dtype=np.int64)
+        release_weight = self._release_weights(
+            dan_index_array, dan_compartment_array, kenyon_index
+        )
 
         logger.info(
             "dopamine layer: %d dopaminergic neurons, %d Kenyon cells, %d plastic synapses",
@@ -272,7 +276,7 @@ class DopamineLayer:
         )
         return DopamineTargets(
             dan_index=dan_index_array,
-            dan_compartment=np.array(dan_compartment, dtype=np.int64),
+            dan_compartment=dan_compartment_array,
             dan_release_weight=release_weight,
             kenyon_index=kenyon_index,
             synapse_position=synapse_position,
@@ -280,12 +284,20 @@ class DopamineLayer:
             synapse_presynaptic_slot=synapse_presynaptic_slot,
         )
 
-    def _release_weights(self, dan_index: np.ndarray, kenyon_index: np.ndarray) -> np.ndarray:
-        """Relative release strength per dopaminergic neuron.
+    def _release_weights(
+        self, dan_index: np.ndarray, dan_compartment: np.ndarray, kenyon_index: np.ndarray
+    ) -> np.ndarray:
+        """Share of a compartment's dopamine release contributed by each neuron.
 
-        A neuron with twice as many synapses onto Kenyon cells releases twice as
-        much dopamine per spike. The weights are normalised to their median, so
-        the calibration of ``per_spike`` refers to a typical neuron.
+        Within a compartment the weights are the neurons' shares of the synapses
+        onto Kenyon cells, so a neuron with twice as many release sites releases
+        twice as much, and they sum to one. Normalising *per compartment* rather
+        than across the brain matters: the concentration that was measured is a
+        compartment-level quantity, and compartments differ enormously in how
+        many dopaminergic neurons they have - two for γ1pedc against forty for
+        γ5. Without this, one PPL1 neuron would flood its compartment simply for
+        being large, and the calibration against the measured 0.3-0.5 µM would
+        apply to no compartment at all.
         """
         if dan_index.size == 0:
             return np.zeros(0, dtype=np.float64)
@@ -299,8 +311,16 @@ class DopamineLayer:
             weights=np.abs(self.network.synapse_weight[positions[onto_kenyon]]),
             minlength=len(dan_index),
         )
-        median = np.median(counts[counts > 0]) if np.any(counts > 0) else 1.0
-        return counts / median if median > 0 else np.ones(len(dan_index))
+
+        weights = np.zeros(len(dan_index), dtype=np.float64)
+        for compartment in np.unique(dan_compartment):
+            members = dan_compartment == compartment
+            total = counts[members].sum()
+            if total > 0:
+                weights[members] = counts[members] / total
+            else:  # no annotated synapses onto Kenyon cells: share equally
+                weights[members] = 1.0 / members.sum()
+        return weights
 
     def _remove_fast_dopamine_synapses(
         self, connectome: Connectome, annotations: Annotations

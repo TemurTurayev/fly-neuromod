@@ -1,0 +1,44 @@
+# Cell types whose transmitter the connectome's predictor gets wrong.
+#
+# The sign of every connection in the model comes from a classifier applied to
+# electron-microscopy images. It is right for most of the brain and wrong for a
+# few cell types that matter a great deal in the mushroom body. Each entry below
+# names a type, the transmitter it actually releases, and the paper that showed
+# it.
+#
+# sign: +1 makes every outgoing connection excitatory, -1 inhibitory.
+
+overrides:
+  - select: cell_class
+    value: Kenyon_Cell
+    transmitter: acetylcholine
+    sign: 1
+    source: >-
+      Barnstedt et al. 2016, Neuron 89:1237, doi:10.1016/j.neuron.2016.02.015 -
+      Kenyon cells express ChAT and VAChT and drive output neurons through
+      nicotinic receptors. The predictor labels 5,172 of the 5,177 Kenyon cells
+      in FlyWire v783 as dopaminergic. The sign happens to come out right
+      (dopamine is treated as excitatory), but the identity does not, and
+      anything that selects dopamine sources by predicted transmitter inherits
+      the error.
+
+  - select: cell_type
+    value: DPM
+    transmitter: gaba and serotonin
+    sign: -1
+    source: >-
+      Haynes et al. 2015, eLife 4:e03868, doi:10.7554/eLife.03868 (GABA) and
+      Lee et al. 2011, doi:10.1371/journal.pone.0022342 (serotonin). The
+      predictor labels DPM dopaminergic, which makes this single large
+      modulatory neuron excite the entire Kenyon cell population instead of
+      damping it.
+
+  - select: cell_type
+    value: APL
+    transmitter: gaba
+    sign: -1
+    source: >-
+      Liu & Davis 2009, Nature Neuroscience 12:53, doi:10.1038/nn.2235 - the
+      inhibitory neuron that keeps Kenyon cell activity sparse. The predictor
+      already calls it GABAergic; the entry is kept so the sparsening circuit is
+      explicit rather than accidental.

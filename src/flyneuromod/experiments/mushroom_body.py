@@ -17,6 +17,7 @@ import numpy as np
 
 from ..data.annotations import Annotations
 from ..data.connectome import Connectome
+from ..data.transmitters import apply_transmitter_overrides
 
 logger = logging.getLogger(__name__)
 
@@ -44,12 +45,16 @@ class MushroomBody:
 
     def mbon_indices(self, cell_type: str | None = None) -> np.ndarray:
         root_ids = (
-            self.annotations.mbons() if cell_type is None else self.annotations.by_cell_type(cell_type)
+            self.annotations.mbons()
+            if cell_type is None
+            else self.annotations.by_cell_type(cell_type)
         )
         return self.connectome.indices_of(root_ids)
 
 
-def extract_mushroom_body(connectome: Connectome, annotations: Annotations) -> MushroomBody:
+def extract_mushroom_body(
+    connectome: Connectome, annotations: Annotations, correct_transmitters: bool = True
+) -> MushroomBody:
     """Select Kenyon cells, output neurons, dopaminergic neurons, APL and DPM.
 
     Parameters
@@ -58,6 +63,11 @@ def extract_mushroom_body(connectome: Connectome, annotations: Annotations) -> M
         Whole-brain connectome.
     annotations:
         Whole-brain cell-type annotations.
+    correct_transmitters:
+        Apply the curated transmitter identities before building the
+        subnetwork. This matters here more than anywhere else in the brain: the
+        predictor calls DPM dopaminergic, which turns the mushroom body's large
+        modulatory neuron into an excitatory drive onto every Kenyon cell.
 
     Returns
     -------
@@ -75,6 +85,8 @@ def extract_mushroom_body(connectome: Connectome, annotations: Annotations) -> M
         selected.extend(int(r) for r in group if int(r) in available)
 
     unique = np.array(sorted(set(selected)), dtype=np.int64)
+    if correct_transmitters:
+        connectome = apply_transmitter_overrides(connectome, annotations)
     sub = connectome.subnetwork(unique)
     logger.info(
         "mushroom body subnetwork: %d neurons, %d connections", sub.n_neurons, sub.n_connections

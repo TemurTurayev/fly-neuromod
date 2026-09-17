@@ -34,7 +34,7 @@ def test_evolve_returns_new_instance_and_leaves_original_untouched():
 
 def test_frozen_dataclass_rejects_mutation():
     p = LIFParams()
-    with pytest.raises(Exception):
+    with pytest.raises((AttributeError, TypeError)):
         p.w_synapse = 1.0  # type: ignore[misc]
 
 

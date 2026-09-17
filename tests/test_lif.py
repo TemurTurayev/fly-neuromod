@@ -154,3 +154,26 @@ def test_spike_trains_report_times_per_neuron():
     assert times.size > 0
     assert np.all(np.diff(times) > 0)
     assert trains.times_of(0).size == 0
+
+
+def test_tonic_drive_raises_the_membrane_and_can_make_a_neuron_fire():
+    p = LIFParams()
+    net = empty_network(params=p)
+    net.set_tonic_drive({0: 2.0})  # volts per second of synaptic drive
+    trains = net.run(0.5)
+    assert trains.rates()[0] > 0
+    assert trains.rates()[1] == 0.0
+
+
+def test_tonic_drive_is_replaced_not_accumulated():
+    net = empty_network()
+    net.set_tonic_drive({0: 2.0})
+    net.set_tonic_drive({1: 1.0})
+    assert net.tonic_drive[0] == 0.0
+    assert net.tonic_drive[1] == pytest.approx(1.0)
+
+
+def test_tonic_drive_rejects_unknown_neurons():
+    net = empty_network()
+    with pytest.raises(IndexError):
+        net.set_tonic_drive({99: 1.0})
