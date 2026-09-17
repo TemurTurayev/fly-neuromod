@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
@@ -40,6 +40,7 @@ class Connectome:
     root_ids: np.ndarray
     weights: sparse.csr_matrix
     release: str
+    _index: dict[int, int] = field(default_factory=dict, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         n = len(self.root_ids)
@@ -47,6 +48,10 @@ class Connectome:
             raise ValueError(
                 f"weights shape {self.weights.shape} does not match {n} neurons"
             )
+        # built once: the lookup is needed constantly and costs ~0.1 s per build
+        object.__setattr__(
+            self, "_index", {int(root_id): i for i, root_id in enumerate(self.root_ids)}
+        )
 
     @property
     def n_neurons(self) -> int:
@@ -58,8 +63,11 @@ class Connectome:
         return int(self.weights.nnz)
 
     def index_map(self) -> dict[int, int]:
-        """Mapping from FlyWire root id to simulation index."""
-        return {int(root_id): i for i, root_id in enumerate(self.root_ids)}
+        """Mapping from FlyWire root id to simulation index (a copy)."""
+        return dict(self._index)
+
+    def contains(self, root_id: int) -> bool:
+        return int(root_id) in self._index
 
     def indices_of(self, root_ids: np.ndarray | list[int]) -> np.ndarray:
         """Simulation indices of the given root ids.
@@ -69,7 +77,7 @@ class Connectome:
         KeyError
             If a root id is not part of this connectome.
         """
-        lookup = self.index_map()
+        lookup = self._index
         missing = [int(r) for r in root_ids if int(r) not in lookup]
         if missing:
             raise KeyError(

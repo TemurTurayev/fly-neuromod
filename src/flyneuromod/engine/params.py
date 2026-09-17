@@ -76,6 +76,8 @@ class LIFParams:
             raise ValueError("refractory period and delay must not be negative")
         if self.v_threshold <= self.v_rest:
             raise ValueError("threshold must be above the resting potential")
+        if self.v_reset >= self.v_threshold:
+            raise ValueError("reset potential must be below the threshold")
 
     @property
     def delay_steps(self) -> int:

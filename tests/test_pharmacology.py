@@ -60,15 +60,22 @@ def test_mammalian_antagonist_is_inert_in_the_fly():
     """SCH-23390 blocks mammalian D1 receptors but not the fly ones."""
     treated = pharmacology.SCH23390.apply_to(MB_COMPARTMENT_RELEASE)
     assert treated == MB_COMPARTMENT_RELEASE
-    assert pharmacology.SCH23390.receptor_block == {}
+    assert pharmacology.SCH23390.receptor_block == ()
     assert pharmacology.SCH23390.receptor_knockout == ()
+
+
+def test_manipulations_are_immutable_and_hashable():
+    """Review finding M1: a shared dict let one caller change a catalogue entry for everyone."""
+    blocks = pharmacology.CONTROL.blocks
+    blocks["Dop1R1"] = 1e6
+    assert pharmacology.get("control").blocks == {}
+    assert hash(pharmacology.COCAINE) != hash(pharmacology.CONTROL)
 
 
 def test_knockouts_name_existing_receptors():
     names = {DOP1R1.name, "Dop1R2(Gq)", "Dop2R"}
     for manipulation in pharmacology.CATALOGUE.values():
-        for receptor in (*manipulation.receptor_knockout, *manipulation.receptor_block):
-            assert receptor in names
+        assert manipulation.receptors_named <= names
 
 
 def test_every_manipulation_documents_its_source():
@@ -80,6 +87,7 @@ def test_every_manipulation_documents_its_source():
 
 def test_lookup_reports_unknown_names():
     assert pharmacology.get("cocaine") is pharmacology.COCAINE
+    assert pharmacology.get("dop1r1-null") is pharmacology.DOP1R1_KNOCKOUT
     with pytest.raises(KeyError, match="available"):
         pharmacology.get("bromocriptine")
 

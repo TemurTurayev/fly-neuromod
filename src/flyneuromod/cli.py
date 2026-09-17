@@ -10,9 +10,10 @@ from pathlib import Path
 from .data.annotations import load_annotations
 from .data.connectome import load_connectome
 from .data.download import DEFAULT_DATA_DIR, FILES, download, total_size_mb
-from .experiments.conditioning import ConditioningProtocol, run_conditioning
+from .experiments.conditioning import run_conditioning
 from .experiments.mushroom_body import extract_mushroom_body
-from .experiments.timing import describe, timing_curve
+from .experiments.protocol import ConditioningProtocol
+from .experiments.timing import DEFAULT_INTERVALS, describe, timing_curve
 from .neuromod import pharmacology
 from .neuromod.dopamine import DopamineConfig
 from .neuromod.mb_atlas import load_atlas
@@ -88,6 +89,7 @@ def _cmd_timing(args: argparse.Namespace) -> int:
         compartment=args.compartment,
         readout_type=args.readout,
         dan_type=args.dan,
+        intervals=tuple(args.intervals),
         seed=args.seed,
     )
     print(describe(points))
@@ -120,7 +122,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--onset", type=float, default=0.2, help="seconds from odour to dopamine (negative: before)"
     )
     conditioning_parser.add_argument(
-        "--manipulation", default="control", help=f"one of {sorted(pharmacology.CATALOGUE)}"
+        "--manipulation", default="control", choices=sorted(pharmacology.CATALOGUE)
     )
     conditioning_parser.add_argument("--seed", type=int, default=0)
     conditioning_parser.set_defaults(func=_cmd_conditioning)
@@ -131,6 +133,13 @@ def build_parser() -> argparse.ArgumentParser:
     timing_parser.add_argument("--compartment", default="gamma5")
     timing_parser.add_argument("--readout", default="MBON01")
     timing_parser.add_argument("--dan", default="PAM01")
+    timing_parser.add_argument(
+        "--intervals",
+        type=float,
+        nargs="+",
+        default=list(DEFAULT_INTERVALS),
+        help="seconds from odour onset to dopamine onset; negative means dopamine first",
+    )
     timing_parser.add_argument("--seed", type=int, default=0)
     timing_parser.set_defaults(func=_cmd_timing)
 
@@ -144,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     try:
         return int(args.func(args))
-    except (FileNotFoundError, KeyError, ValueError) as error:
+    except (FileNotFoundError, KeyError, ValueError, RuntimeError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
 

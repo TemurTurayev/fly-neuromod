@@ -13,7 +13,7 @@ Srivastava et al. 2005). They are included as inert controls on purpose.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from typing import Any
 
 from .field import ReleaseKinetics
@@ -33,8 +33,10 @@ class Manipulation:
     release_factor:
         Multiplier on the amount of dopamine released per spike.
     receptor_block:
-        Mapping from receptor name to the ratio ``[antagonist] / K_i``, used by
-        :meth:`ReceptorPopulation.set_competitive_antagonist`.
+        Pairs of receptor name and the ratio ``[antagonist] / K_i``, used by
+        :meth:`ReceptorPopulation.set_competitive_antagonist`. Stored as a tuple
+        so that the object is genuinely immutable and hashable; read it through
+        :attr:`blocks`.
     receptor_knockout:
         Receptor names whose expression is set to zero, modelling a null mutant
         or cell-type-specific knockdown.
@@ -45,7 +47,7 @@ class Manipulation:
     name: str
     k_m_factor: float = 1.0
     release_factor: float = 1.0
-    receptor_block: dict[str, float] = field(default_factory=dict)
+    receptor_block: tuple[tuple[str, float], ...] = ()
     receptor_knockout: tuple[str, ...] = ()
     note: str = ""
 
@@ -54,9 +56,19 @@ class Manipulation:
             raise ValueError(f"{self.name}: k_m_factor must be positive")
         if self.release_factor < 0:
             raise ValueError(f"{self.name}: release_factor must not be negative")
-        for receptor, ratio in self.receptor_block.items():
+        for receptor, ratio in self.receptor_block:
             if ratio < 0:
                 raise ValueError(f"{self.name}: block ratio for {receptor} must not be negative")
+
+    @property
+    def blocks(self) -> dict[str, float]:
+        """Receptor blocks as a fresh dictionary (changing it changes nothing)."""
+        return dict(self.receptor_block)
+
+    @property
+    def receptors_named(self) -> set[str]:
+        """Every receptor name this manipulation refers to."""
+        return set(self.receptor_knockout) | {name for name, _ in self.receptor_block}
 
     def apply_to(self, kinetics: ReleaseKinetics) -> ReleaseKinetics:
         """Return the release kinetics as modified by this manipulation."""
@@ -104,7 +116,6 @@ FUMIN = Manipulation(
 FLUPENTIXOL = Manipulation(
     name="flupentixol",
     release_factor=4.0,
-    receptor_block={"Dop2R": 10.0},
     note=(
         "Blocks the Dop2R autoreceptor, which normally suppresses release: evoked "
         "dopamine in the mushroom body rises from 0.31 to 1.2 uM, about fourfold "
@@ -153,23 +164,21 @@ DOP1R2_KNOCKOUT = Manipulation(
 )
 
 CATALOGUE: dict[str, Manipulation] = {
-    m.name: m
-    for m in (
-        CONTROL,
-        COCAINE,
-        METHYLPHENIDATE,
-        FUMIN,
-        FLUPENTIXOL,
-        IODOTYROSINE,
-        SCH23390,
-        DOP1R1_KNOCKOUT,
-        DOP1R2_KNOCKOUT,
-    )
+    "control": CONTROL,
+    "cocaine": COCAINE,
+    "methylphenidate": METHYLPHENIDATE,
+    "fumin": FUMIN,
+    "flupentixol": FLUPENTIXOL,
+    "iodotyrosine": IODOTYROSINE,
+    "sch23390": SCH23390,
+    "dop1r1-null": DOP1R1_KNOCKOUT,
+    "dop1r2-null": DOP1R2_KNOCKOUT,
 }
+"""Manipulations by command-line name."""
 
 
 def get(name: str) -> Manipulation:
-    """Look up a manipulation by name.
+    """Look up a manipulation by its catalogue key (e.g. ``"dop1r1-null"``).
 
     Raises
     ------

@@ -1,24 +1,33 @@
 """Dopamine-gated plasticity at Kenyon cell output synapses.
 
-The rule implemented here is the one supported by the *Drosophila* mushroom body
-literature, not a generic reinforcement-learning update:
+The rule is built from the two molecular coincidence detectors that the fly
+literature places in the Kenyon cell terminal, and it inherits their sensitivity
+to *order*:
 
-* **Three factors.** A synapse changes only when presynaptic activity and
-  dopamine coincide *in the same compartment*. Dopamine alone does nothing;
-  Kenyon cell activity alone does nothing. Odour specificity follows for free,
-  because only the Kenyon cells that carried the odour hold an eligibility trace.
-* **The sign depends on the order.** Kenyon cell activity followed by dopamine
-  depresses the synapse through the Gs/cAMP branch (Dop1R1); dopamine followed
-  by Kenyon cell activity potentiates it through the Gq/calcium branch
-  (Dop1R2). Handler et al. (2019), *Cell* 178:60, doi:10.1016/j.cell.2019.05.040.
-* **Presynaptic expression.** The change lives in the Kenyon cell terminal, so
-  it applies per (Kenyon cell, compartment), and the same Kenyon cell can be
-  depressed in one compartment while unchanged in another. Hige et al. (2015),
-  *Neuron* 88:985, doi:10.1016/j.neuron.2015.11.003.
+**Depression: calcium first, then Gs.** The rutabaga adenylyl cyclase is
+activated by Ca²⁺/calmodulin and by Gαs together, and it responds far more
+strongly when the calcium signal is already present when the transmitter
+arrives (Yovell & Abrams 1992, PNAS 89:6526; Levin et al. 1992, Cell 68:479).
+Here, the Kenyon cell's recent activity is a calcium trace, and depression is
+driven by the *arrival* of Dop1R1 (Gs) activation onto that trace.
 
-The eligibility trace is what turns the millisecond-scale spiking layer into
-something a second-scale modulator can act on; its time constant sets the
-coincidence window (optimal 0.1-1 s, gone by ~6 s in Handler et al. 2019).
+**Potentiation: Gq first, then calcium.** The IP₃ receptor opens when IP₃ is
+bound before calcium arrives, and is inhibited by calcium that comes first
+(Bezprozvanny et al. 1991, Nature 351:751). Here, Dop1R2 (Gq) activation leaves
+an IP₃ trace, and potentiation is driven by the *arrival* of Kenyon cell calcium
+onto it.
+
+Together they give the result that a symmetric product of "dopamine × activity"
+cannot give, whatever its parameters: odour then dopamine depresses, dopamine
+then odour potentiates (Handler et al. 2019, Cell 178:60). A simpler rule was
+tried first and never flipped sign — dopamine lingers for seconds, so any rule
+that only multiplies concentrations sees both orders as overlap.
+
+Both drives are increments per arriving event, not rates, so the amount learned
+does not depend on the integration step.
+
+The change is expressed presynaptically, per (Kenyon cell, compartment), as
+measured by Hige et al. (2015), Neuron 88:985.
 """
 
 from __future__ import annotations
@@ -34,24 +43,24 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True, slots=True)
 class PlasticityParams:
-    """Constants of the three-factor rule.
+    """Constants of the order-selective rule.
 
     Attributes
     ----------
     tau_eligibility:
-        Decay time constant of the presynaptic eligibility trace (seconds). It
-        sets how long after an odour dopamine can still write a memory.
+        Decay time constant of the presynaptic calcium trace (seconds). It sets
+        how long after an odour dopamine can still write a memory.
     rate_depression:
-        Fraction of the weight lost per second at full cAMP and a fresh
-        eligibility trace.
+        Fraction of the weight lost when Gs activation rises by 1.0 onto a fully
+        primed terminal.
     rate_potentiation:
-        Fraction of the weight gained per second at full calcium while the
-        presynaptic cell is firing.
+        Fraction of the weight gained when a terminal goes from silent to fully
+        active while the IP₃ signal is 1.0.
     min_fraction, max_fraction:
         Bounds on the synaptic weight as a fraction of its anatomical value.
     tau_recovery:
-        Optional time constant of the slow drift back to the anatomical weight
-        (passive forgetting). ``None`` disables it.
+        Optional time constant of a slow drift back to the anatomical weight.
+        ``None`` disables it.
     """
 
     tau_eligibility: float
@@ -82,18 +91,18 @@ class SynapticPlasticity:
     ----------
     weights:
         The simulator's weight array. The selected entries are written in place
-        after every step, which is how the plasticity reaches the running
-        network.
+        after every step, which is how plasticity reaches the running network.
     synapse_index:
         Positions of the plastic synapses inside ``weights``.
     presynaptic_index:
         For each plastic synapse, the index of its presynaptic cell in the
         spike-count vector passed to :meth:`step`.
     compartment_index:
-        For each plastic synapse, the index of the dopamine compartment it sits
-        in, used to look up cAMP and calcium.
+        For each plastic synapse, the index of the dopamine field it sits in.
+    n_compartments:
+        Number of dopamine fields.
     params:
-        Learning-rule constants.
+        Rule constants.
     dt:
         Time step of the slow layer in seconds.
     """
@@ -104,6 +113,7 @@ class SynapticPlasticity:
         synapse_index: np.ndarray,
         presynaptic_index: np.ndarray,
         compartment_index: np.ndarray,
+        n_compartments: int,
         params: PlasticityParams,
         dt: float,
     ) -> None:
@@ -116,58 +126,87 @@ class SynapticPlasticity:
             )
         if dt <= 0:
             raise ValueError("dt must be positive")
+        if n_compartments <= 0:
+            raise ValueError("n_compartments must be positive")
+        if compartment_index.size and (
+            compartment_index.min() < 0 or compartment_index.max() >= n_compartments
+        ):
+            raise ValueError("compartment_index outside the number of compartments")
 
         self.weights = weights
         self.synapse_index = synapse_index
         self.presynaptic_index = presynaptic_index
         self.compartment_index = compartment_index
+        self.n_compartments = int(n_compartments)
         self.params = params
         self.dt = float(dt)
 
         self.baseline_weight = np.array(weights[synapse_index], dtype=np.float64)
         self.weight_factor = np.ones(len(synapse_index), dtype=np.float64)
         self.eligibility = np.zeros(len(synapse_index), dtype=np.float64)
+        self._previous_gs = np.zeros(self.n_compartments, dtype=np.float64)
         self._eligibility_decay = float(np.exp(-dt / params.tau_eligibility))
 
     def reset(self) -> None:
-        """Restore anatomical weights and clear the eligibility trace."""
+        """Restore anatomical weights and clear every trace."""
         self.weight_factor[:] = 1.0
         self.eligibility[:] = 0.0
+        self._previous_gs[:] = 0.0
         self.weights[self.synapse_index] = self.baseline_weight
 
-    def step(self, presynaptic_spikes: np.ndarray, camp: np.ndarray, calcium: np.ndarray) -> None:
+    def step(
+        self,
+        presynaptic_spikes: np.ndarray,
+        gs_activation: np.ndarray,
+        ip3: np.ndarray,
+    ) -> None:
         """Advance the plastic weights by one slow step.
 
         Parameters
         ----------
         presynaptic_spikes:
             Spikes emitted by each presynaptic cell during this step.
-        camp:
-            cAMP level per compartment (Gs branch, drives depression).
-        calcium:
-            Calcium level per compartment (Gq branch, drives potentiation).
+        gs_activation:
+            Activation of Gs-coupled receptors per compartment, in [0, 1].
+        ip3:
+            IP₃ signal from Gq-coupled receptors per compartment, in [0, 1].
         """
-        spikes = np.asarray(presynaptic_spikes, dtype=np.float64)[self.presynaptic_index]
-        camp_here = np.asarray(camp, dtype=np.float64)[self.compartment_index]
-        calcium_here = np.asarray(calcium, dtype=np.float64)[self.compartment_index]
+        gs_activation = np.asarray(gs_activation, dtype=np.float64)
+        ip3 = np.asarray(ip3, dtype=np.float64)
+        if gs_activation.shape != (self.n_compartments,) or ip3.shape != (self.n_compartments,):
+            raise ValueError(
+                f"gs_activation and ip3 must have shape ({self.n_compartments},)"
+            )
 
-        # A Kenyon cell answers an odour with a handful of spikes, so what marks
-        # a synapse as eligible is *that* the cell fired, not how often. The
-        # trace therefore saturates at one instead of counting spikes; otherwise
-        # the amount learned would scale with an arbitrary stimulation rate.
+        spikes = np.asarray(presynaptic_spikes, dtype=np.float64)[self.presynaptic_index]
         active = np.minimum(spikes, 1.0)
 
-        # dopamine arriving while the trace is up depresses the synapse
-        # (forward pairing), using the trace from before this step's spikes
+        # depression: Gs activation *arriving* onto a terminal whose calcium
+        # trace is already up (the trace from before this step's spikes)
+        gs_arrival = np.maximum(gs_activation - self._previous_gs, 0.0)
+        self._previous_gs[:] = gs_activation
         self.eligibility *= self._eligibility_decay
-        depression = self.params.rate_depression * np.maximum(camp_here, 0.0) * self.eligibility
-        self.eligibility += (1.0 - self.eligibility) * active
+        depression = (
+            self.params.rate_depression * gs_arrival[self.compartment_index] * self.eligibility
+        )
 
-        # dopamine that arrived first leaves calcium elevated; Kenyon cell
-        # spikes landing in that window potentiate instead (backward pairing)
-        potentiation = self.params.rate_potentiation * np.maximum(calcium_here, 0.0) * active
+        # potentiation: calcium *arriving* onto IP3 that is already there. The
+        # IP3 receptor's calcium dependence is bell-shaped: calcium opens it, but
+        # calcium that is already high inhibits it. So the drive is the arrival
+        # times the fraction of receptors not yet inhibited, and a terminal that
+        # has been firing all along - its trace refilled spike after spike - adds
+        # almost nothing.
+        headroom = 1.0 - self.eligibility
+        calcium_arrival = headroom * active
+        potentiation = (
+            self.params.rate_potentiation
+            * np.maximum(ip3, 0.0)[self.compartment_index]
+            * calcium_arrival
+            * headroom
+        )
+        self.eligibility += calcium_arrival
 
-        self.weight_factor += self.dt * (potentiation - depression)
+        self.weight_factor += potentiation - depression
         if self.params.tau_recovery is not None:
             self.weight_factor += self.dt * (1.0 - self.weight_factor) / self.params.tau_recovery
         np.clip(
@@ -176,16 +215,16 @@ class SynapticPlasticity:
             self.params.max_fraction,
             out=self.weight_factor,
         )
-
         self.weights[self.synapse_index] = self.baseline_weight * self.weight_factor
 
-    def depression_of(self, mask: np.ndarray | None = None) -> float:
+    def change_of(self, mask: np.ndarray | None = None) -> float:
         """Mean weight change of the selected synapses, as a fraction of baseline.
 
-        Returns a negative number for depression. This is the quantity reported
-        by electrophysiological pairing experiments.
+        Negative means depression. Returns ``nan`` when the selection is empty,
+        so that "nothing measured" is never mistaken for "nothing changed".
         """
         factors = self.weight_factor if mask is None else self.weight_factor[mask]
         if factors.size == 0:
-            return 0.0
+            logger.warning("weight change requested for an empty set of synapses")
+            return float("nan")
         return float(factors.mean() - 1.0)

@@ -90,8 +90,8 @@ DOPAMINE_RECEPTORS = KC_TERMINAL_RECEPTORS
 # ---------------------------------------------------------------------------
 
 MB_COMPARTMENT_RELEASE = ReleaseKinetics(
-    # calibrated so that 20 Hz firing of one dopaminergic neuron holds the
-    # compartment near 0.4 uM, the peak measured in the adult mushroom body
+    # calibrated so that 20 Hz firing of a compartment's whole dopaminergic
+    # population holds it near 0.4 uM, the peak measured in the adult mushroom body
     # during sugar feeding and cholinergic stimulation
     # (Shin & Venton 2022, Angew Chem 61:e202207399, doi:10.1002/anie.202207399).
     per_spike=0.0059,
@@ -142,21 +142,21 @@ KC_TO_MBON_PLASTICITY = PlasticityParams(
     # 0.1-1 s and has no effect by ~6 s (Handler et al. 2019). tau = 2 s leaves
     # 5% of the trace at 6 s.
     tau_eligibility=2.0,
-    # calibrated in experiments/conditioning.py against the synaptic measurement
-    # of Hige et al. 2015, Neuron 88:985: one pairing removes about 90% of the
-    # charge transferred by the trained Kenyon cells' synapses onto
-    # MBON-gamma1pedc. Units are fractions of the synaptic weight per second.
+    # calibrated against the synaptic measurement of Hige et al. 2015, Neuron
+    # 88:985: one pairing (5 s odour, 5 s of 20 Hz dopaminergic firing starting
+    # 0.2 s in) removes about 90% of the trained synapses' weight onto
+    # MBON-gamma1pedc. Units: fraction of the weight per unit of Gs activation
+    # arriving onto a fully primed terminal.
     #
-    # The same paper also reports the spiking response of that neuron falling by
-    # about 80%, which this model cannot match at the same time: with its output
-    # neuron isolated from the rest of the brain, a given loss of synaptic drive
-    # costs it more spikes than it costs the fly. Calibrating on the synaptic
-    # number keeps the fitted parameter attached to the quantity the rule
-    # actually describes. See docs/validation.md.
-    rate_depression=1.2,
-    # assumed: no measurement of the potentiating arm's size exists, only its
-    # existence and sign (Handler et al. 2019). Half the depression rate.
-    rate_potentiation=0.6,
+    # The same paper reports the spiking response of that neuron falling by about
+    # 80%; the model cannot match both at once, because its isolated output neuron
+    # loses more spikes for a given loss of synaptic drive. See docs/validation.md.
+    rate_depression=3.6,
+    # calibrated on the sign of the timing curve, not its size, which is not
+    # measured: dopamine 1.2 s before the odour must potentiate while dopamine
+    # 0.5 s after it depresses (Handler et al. 2019). The ratio to the depression
+    # rate sets where the sign flips.
+    rate_potentiation=1.44,
     min_fraction=0.0,
     max_fraction=1.5,
     # Forgetting in the fly is an active, dopamine-driven process through Dop1R2

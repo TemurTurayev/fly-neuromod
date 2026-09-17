@@ -108,6 +108,8 @@ class ReceptorPopulation:
             raise ValueError("occupancy_scale must not be negative")
         self.occupancy = np.zeros(self.n_cells, dtype=np.float64)
         self._antagonist_factor = 1.0
+        self._decay_on = float(np.exp(-self.dt / spec.tau_on))
+        self._decay_off = float(np.exp(-self.dt / spec.tau_off))
 
     def set_competitive_antagonist(self, concentration: float, k_i: float) -> None:
         """Apply a competitive antagonist, shifting the apparent EC50.
@@ -147,9 +149,11 @@ class ReceptorPopulation:
         ligand = np.power(np.maximum(concentration, 0.0), self.spec.hill)
         target = self.occupancy_scale * ligand / (ligand + ec50**self.spec.hill)
 
-        tau = np.where(target > self.occupancy, self.spec.tau_on, self.spec.tau_off)
-        self.occupancy += self.dt * (target - self.occupancy) / tau
-        return self.occupancy
+        # exact relaxation towards the target over one step: stable for any dt,
+        # and it can never overshoot past the target
+        decay = np.where(target > self.occupancy, self._decay_on, self._decay_off)
+        self.occupancy[:] = target + (self.occupancy - target) * decay
+        return self.occupancy.copy()
 
 
 @dataclass(frozen=True, slots=True)
@@ -181,9 +185,11 @@ class SignalingParams:
 class SecondMessenger:
     """cAMP and calcium driven by receptor occupancy.
 
-    These two signals are what the effectors read: cAMP (through PKA) gates the
-    depression of Kenyon cell output synapses, while the Gq/calcium branch of
-    Dop1R2 is associated with potentiation and forgetting.
+    ``calcium`` is the Gq branch: IP₃ production and the store calcium it
+    releases, which the plasticity rule reads as its IP₃ signal. ``camp`` is kept
+    as a readout comparable with cAMP imaging; the rule itself reads receptor
+    activation, because the coincidence detection happens at the cyclase, before
+    cAMP accumulates.
     """
 
     def __init__(self, n_cells: int, params: SignalingParams | None = None, dt: float = 1e-3):
@@ -196,6 +202,8 @@ class SecondMessenger:
         self.dt = float(dt)
         self.camp = np.full(self.n_cells, self.params.basal_camp, dtype=np.float64)
         self.calcium = np.zeros(self.n_cells, dtype=np.float64)
+        self._decay_camp = float(np.exp(-self.dt / self.params.tau_camp))
+        self._decay_calcium = float(np.exp(-self.dt / self.params.tau_calcium))
 
     def reset(self) -> None:
         self.camp[:] = self.params.basal_camp
@@ -210,7 +218,8 @@ class SecondMessenger:
         """Advance cAMP and calcium by one ``dt``."""
         p = self.params
         drive = p.basal_camp + p.gain_gs * gs_occupancy - p.gain_gi * gi_occupancy
-        self.camp += self.dt * (drive - self.camp) / p.tau_camp
+        self.camp[:] = drive + (self.camp - drive) * self._decay_camp
 
         gq = np.zeros(self.n_cells) if gq_occupancy is None else gq_occupancy
-        self.calcium += self.dt * (p.gain_gq * gq - self.calcium) / p.tau_calcium
+        target = p.gain_gq * gq
+        self.calcium[:] = target + (self.calcium - target) * self._decay_calcium

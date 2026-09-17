@@ -20,8 +20,9 @@ from pathlib import Path
 
 from flyneuromod.data.annotations import load_annotations
 from flyneuromod.data.connectome import load_connectome
-from flyneuromod.experiments.conditioning import ConditioningProtocol, run_conditioning
+from flyneuromod.experiments.conditioning import run_conditioning
 from flyneuromod.experiments.mushroom_body import extract_mushroom_body
+from flyneuromod.experiments.protocol import ConditioningProtocol
 from flyneuromod.experiments.timing import describe, timing_curve
 from flyneuromod.neuromod import pharmacology
 from flyneuromod.neuromod.dopamine import DopamineConfig
@@ -55,9 +56,7 @@ def main() -> None:
     print("2. same pairing, Dop1R1 null (expected: no learning)")
     print("   " + knockout.summary(), flush=True)
 
-    points = timing_curve(
-        mushroom_body, intervals=(-1.2, 0.5, 6.0), protocol=protocol, seed=args.seed
-    )
+    points = timing_curve(mushroom_body, intervals=(-1.2, -0.5, 0.0, 0.5, 6.0), seed=args.seed)
     print("3. pairing interval, γ5 (Handler et al. 2019: backward +, forward -, late 0)")
     print("   " + describe(points).replace("\n", "\n   "), flush=True)
 

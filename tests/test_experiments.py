@@ -9,27 +9,12 @@ import pytest
 
 from flyneuromod.data.annotations import load_annotations
 from flyneuromod.data.connectome import load_connectome
-from flyneuromod.experiments.conditioning import ConditioningProtocol, run_conditioning
+from flyneuromod.experiments.conditioning import run_conditioning
 from flyneuromod.experiments.mushroom_body import extract_mushroom_body, sparse_odour
+from flyneuromod.experiments.protocol import ConditioningProtocol
 from flyneuromod.experiments.timing import timing_curve
 
 from .conftest import ANNOTATIONS, COMPLETENESS, CONNECTIVITY, requires_data
-
-
-def test_protocol_validation():
-    with pytest.raises(ValueError):
-        ConditioningProtocol(odour_duration=0)
-    with pytest.raises(ValueError):
-        ConditioningProtocol(n_pairings=0)
-    with pytest.raises(ValueError):
-        ConditioningProtocol(odour_overlap=1.5)
-
-
-def test_protocol_evolve_keeps_the_original():
-    base = ConditioningProtocol()
-    changed = base.evolve(dopamine_onset=-0.5)
-    assert changed.dopamine_onset == -0.5
-    assert base.dopamine_onset == 0.2
 
 
 def test_sparse_odour_picks_distinct_cells():
@@ -69,11 +54,10 @@ def test_pairing_depresses_the_trained_odour_more_than_the_control():
     annotations = load_annotations(ANNOTATIONS)
     mushroom_body = extract_mushroom_body(connectome, annotations)
 
-    result = run_conditioning(mushroom_body, protocol=ConditioningProtocol(odour_rate=150.0))
+    result = run_conditioning(mushroom_body, protocol=ConditioningProtocol())
 
-    assert result.trained_weight_change < -0.5  # trained synapses clearly depressed
+    assert result.trained_weight_change < -0.7  # Hige et al. 2015: about -90%
     assert result.trained_depression > result.control_depression
-    assert result.trained_depression > 0.5
 
 
 @pytest.mark.slow
@@ -84,7 +68,7 @@ def test_the_sign_of_plasticity_follows_the_pairing_order():
     annotations = load_annotations(ANNOTATIONS)
     mushroom_body = extract_mushroom_body(connectome, annotations)
 
-    points = timing_curve(mushroom_body, intervals=(-1.2, 0.5, 6.0))
+    points = timing_curve(mushroom_body, intervals=(-1.2, 0.0, 0.5, 6.0))
     by_interval = {p.interval: p.weight_change for p in points}
 
     assert by_interval[0.5] < 0  # odour first: depression

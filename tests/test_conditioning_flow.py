@@ -5,6 +5,7 @@ measure - but on a network small enough to finish in a second, so the protocol
 logic itself is covered without waiting for a full simulation.
 """
 
+import math
 from pathlib import Path
 
 import numpy as np
@@ -13,12 +14,9 @@ import pytest
 
 from flyneuromod.data.annotations import load_annotations
 from flyneuromod.data.connectome import load_connectome
-from flyneuromod.experiments.conditioning import (
-    ConditioningProtocol,
-    _overlapping_odour,
-    run_conditioning,
-)
+from flyneuromod.experiments.conditioning import _overlapping_odour, run_conditioning
 from flyneuromod.experiments.mushroom_body import MushroomBody, extract_mushroom_body
+from flyneuromod.experiments.protocol import ConditioningProtocol
 
 N_KENYON = 24
 
@@ -125,7 +123,25 @@ def test_control_odour_shares_the_requested_fraction():
     assert len(np.intersect1d(control, trained)) == 10
 
 
-def test_fractional_loss_of_a_silent_neuron_is_zero(toy_mushroom_body):
+def test_a_silent_readout_is_reported_as_unmeasured(toy_mushroom_body):
+    """Review finding M4: 'no response' used to read as 'no learning'."""
     result = run_conditioning(toy_mushroom_body, protocol=quick_protocol(odour_rate=0.0))
-    assert result.trained_depression == 0.0
-    assert result.control_depression == 0.0
+    assert math.isnan(result.trained_depression)
+    assert math.isnan(result.control_depression)
+    assert "n/a" in result.summary()
+
+
+def test_operating_point_fit_reaches_the_target(toy_mushroom_body):
+    """Review finding H5: the tonic-drive fit had no fast coverage."""
+    result = run_conditioning(
+        toy_mushroom_body, protocol=quick_protocol(readout_baseline_rate=20.0)
+    )
+    assert result.baseline == pytest.approx(20.0, abs=6.0)
+
+
+def test_inconsistent_circuits_are_refused_before_simulating(toy_mushroom_body):
+    """Review finding H4: a mismatched compartment used to report a fake +0%."""
+    with pytest.raises(ValueError, match="does not innervate"):
+        run_conditioning(toy_mushroom_body, compartment="gamma5", protocol=quick_protocol())
+    with pytest.raises(KeyError):
+        run_conditioning(toy_mushroom_body, compartment="gamma55", protocol=quick_protocol())

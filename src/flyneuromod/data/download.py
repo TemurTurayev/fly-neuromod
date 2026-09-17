@@ -17,6 +17,11 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 DEFAULT_DATA_DIR = Path("data/raw")
+TIMEOUT_SECONDS = 120
+
+SHIU_MODEL_COMMIT = "91bdd1e7dcf193f3e7ca5a8933497fcef63b7960"
+FLYWIRE_ANNOTATIONS_COMMIT = "8587524c1748ce5ef2080822a2fc890fc03bf597"
+"""Pinned commits: the tests assert exact neuron counts, so the data must not move."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,7 +33,9 @@ class DataFile:
     name:
         File name on disk.
     url:
-        Where to fetch it from.
+        Where to fetch it from, pinned to a commit.
+    sha256:
+        Expected checksum; a download that does not match is rejected.
     approximate_size_mb:
         Rough size, so the user knows what a download will cost.
     source:
@@ -37,6 +44,7 @@ class DataFile:
 
     name: str
     url: str
+    sha256: str
     approximate_size_mb: int
     source: str
 
@@ -45,27 +53,31 @@ FILES = (
     DataFile(
         name="Completeness_783.csv",
         url=(
-            "https://raw.githubusercontent.com/philshiu/Drosophila_brain_model/main/"
-            "Completeness_783.csv"
+            "https://raw.githubusercontent.com/philshiu/Drosophila_brain_model/"
+            f"{SHIU_MODEL_COMMIT}/Completeness_783.csv"
         ),
+        sha256="bbb847a4cc2caaa7a16349722d220c087317b946d148d4d592d94d250617a311",
         approximate_size_mb=3,
         source="Shiu et al. 2024 brain model repository (MIT), FlyWire v783 neuron list",
     ),
     DataFile(
         name="Connectivity_783.parquet",
         url=(
-            "https://raw.githubusercontent.com/philshiu/Drosophila_brain_model/main/"
-            "Connectivity_783.parquet"
+            "https://raw.githubusercontent.com/philshiu/Drosophila_brain_model/"
+            f"{SHIU_MODEL_COMMIT}/Connectivity_783.parquet"
         ),
+        sha256="efeb23fb99098e9c390f6869969b2a121a2ee92c833cfc45ecb2c1d8e1af0347",
         approximate_size_mb=96,
         source="Shiu et al. 2024 brain model repository (MIT), FlyWire v783 connectivity",
     ),
     DataFile(
         name="flywire_annotations_v783.tsv",
         url=(
-            "https://raw.githubusercontent.com/flyconnectome/flywire_annotations/main/"
-            "supplemental_files/Supplemental_file1_neuron_annotations.tsv"
+            "https://raw.githubusercontent.com/flyconnectome/flywire_annotations/"
+            f"{FLYWIRE_ANNOTATIONS_COMMIT}/supplemental_files/"
+            "Supplemental_file1_neuron_annotations.tsv"
         ),
+        sha256="9a4f8b2f843196074431ebd7cd883536afa1be86c8a4ce90970441e8be81d1be",
         approximate_size_mb=30,
         source="Schlegel et al. 2024 cell-type annotations",
     ),
@@ -116,7 +128,14 @@ def download(
         target = directory / data_file.name
         paths[data_file.name] = target
         if target.is_file() and not force:
-            logger.info("%s already present", data_file.name)
+            if sha256_of(target) != data_file.sha256:
+                logger.warning(
+                    "%s is present but does not match the pinned checksum; "
+                    "results may differ from the documented ones (use --force to re-download)",
+                    data_file.name,
+                )
+            else:
+                logger.info("%s already present and verified", data_file.name)
             continue
 
         logger.info(
@@ -127,13 +146,24 @@ def download(
         )
         temporary = target.with_suffix(target.suffix + ".part")
         try:
-            with urllib.request.urlopen(data_file.url) as response, temporary.open("wb") as out:
+            with (
+                urllib.request.urlopen(data_file.url, timeout=TIMEOUT_SECONDS) as response,
+                temporary.open("wb") as out,
+            ):
                 shutil.copyfileobj(response, out)
-            temporary.replace(target)
         except Exception as error:  # noqa: BLE001 - re-raised with context below
             temporary.unlink(missing_ok=True)
             raise RuntimeError(
                 f"could not download {data_file.name} from {data_file.url}: {error}"
             ) from error
+
+        checksum = sha256_of(temporary)
+        if checksum != data_file.sha256:
+            temporary.unlink(missing_ok=True)
+            raise RuntimeError(
+                f"{data_file.name} has checksum {checksum}, expected {data_file.sha256}; "
+                "the upstream file changed or the download was corrupted"
+            )
+        temporary.replace(target)
 
     return paths

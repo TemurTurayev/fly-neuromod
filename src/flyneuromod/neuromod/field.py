@@ -136,4 +136,4 @@ class DopamineField:
         c += self.kinetics.per_spike * spikes
         c += self.dt * (self.kinetics.tonic_release - self.kinetics.clearance_at(c))
         np.clip(c, 0.0, None, out=c)
-        return c
+        return c.copy()

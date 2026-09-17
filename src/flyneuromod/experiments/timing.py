@@ -16,8 +16,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from ..neuromod.dopamine import DopamineConfig
-from .conditioning import ConditioningProtocol, run_conditioning
+from .conditioning import run_conditioning
 from .mushroom_body import MushroomBody
+from .protocol import HANDLER_2019, ConditioningProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ def timing_curve(
         Delays from odour onset to dopamine onset, in seconds.
     protocol:
         Base protocol; its ``dopamine_onset`` is replaced by each interval.
+        Defaults to the 2 s odour and 1 s dopamine of Handler et al. (2019).
     config:
         Dopamine layer configuration.
     seed:
@@ -68,7 +70,7 @@ def timing_curve(
     list of TimingPoint
         One entry per interval, in the order given.
     """
-    base = protocol or ConditioningProtocol()
+    base = protocol or HANDLER_2019
     points: list[TimingPoint] = []
     for interval in intervals:
         result = run_conditioning(
@@ -100,8 +102,12 @@ def describe(points: Sequence[TimingPoint]) -> str:
     """One line per interval, for printing a curve in the terminal."""
     lines = ["interval (s)   weight change   response change"]
     for point in points:
+        response = (
+            "    n/a"
+            if point.response_change != point.response_change  # nan
+            else f"{100 * point.response_change:+7.1f}%"
+        )
         lines.append(
-            f"{point.interval:+8.2f}       {100 * point.weight_change:+7.1f}%"
-            f"        {100 * point.response_change:+7.1f}%"
+            f"{point.interval:+8.2f}       {100 * point.weight_change:+7.1f}%        {response}"
         )
     return "\n".join(lines)

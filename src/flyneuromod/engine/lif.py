@@ -134,6 +134,7 @@ class LIFNetwork:
         # tonic synaptic drive in volts per second, standing in for the input a
         # neuron receives from outside the simulated subnetwork
         self.tonic_drive = np.zeros(self.n_neurons, dtype=np.float64)
+        self._attached: dict[str, object] = {}
 
     # ------------------------------------------------------------------
     # configuration
@@ -144,12 +145,11 @@ class LIFNetwork:
         Driven neurons lose their refractory period, as in the reference model.
         Calling this replaces any previously attached drives.
         """
-        self._refractory_left[:] = 0
-        self._refractory_steps[:] = max(self.params.refractory_steps - 1, 0)
-
         targets = np.fromiter(drives.keys(), dtype=np.int64, count=len(drives))
-        if targets.size and (targets.min() < 0 or targets.max() >= self.n_neurons):
-            raise IndexError("Poisson target index outside the network")
+        self._check_indices(targets)
+
+        self._refractory_steps[:] = max(self.params.refractory_steps - 1, 0)
+        self._refractory_left[targets] = 0
 
         self._poisson_targets = targets
         self._poisson_lambda = np.array(
@@ -159,6 +159,42 @@ class LIFNetwork:
             [d.weight(self.params) for d in drives.values()], dtype=np.float64
         )
         self._refractory_steps[targets] = 0
+
+    def zero_outgoing(self, indices: Sequence[int] | np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Remove the outgoing fast synapses of some neurons.
+
+        Unlike :meth:`silence`, incoming synapses are kept: the neurons still
+        receive input and still spike, they just no longer act through fast
+        synapses. Returns ``(positions, previous_values)`` so that the change
+        can be undone with :meth:`restore_synapses`.
+        """
+        indices = np.asarray(indices, dtype=np.int64)
+        self._check_indices(indices)
+        positions = self._flat_positions(indices)
+        previous = self.synapse_weight[positions].copy()
+        self.synapse_weight[positions] = 0.0
+        return positions, previous
+
+    def restore_synapses(self, positions: np.ndarray, values: np.ndarray) -> None:
+        """Write back synaptic weights saved by :meth:`zero_outgoing`."""
+        self.synapse_weight[positions] = values
+
+    def attach(self, modulator: object, kind: str) -> None:
+        """Register a modulator, refusing a second one of the same kind.
+
+        Two dopamine layers on one network would each remove the fast synapses
+        and read weights the other had already changed.
+        """
+        if kind in self._attached:
+            raise RuntimeError(f"a {kind} modulator is already attached to this network")
+        self._attached[kind] = modulator
+
+    def detach(self, kind: str) -> None:
+        self._attached.pop(kind, None)
+
+    def _check_indices(self, indices: np.ndarray) -> None:
+        if indices.size and (indices.min() < 0 or indices.max() >= self.n_neurons):
+            raise IndexError("neuron index outside the network")
 
     def set_tonic_drive(self, drives: dict[int, float]) -> None:
         """Set a constant synaptic drive for some neurons, in volts per second.
@@ -184,6 +220,7 @@ class LIFNetwork:
         indices = np.asarray(indices, dtype=np.int64)
         if indices.size == 0:
             return
+        self._check_indices(indices)
         for i in indices:
             self.synapse_weight[self._indptr[i] : self._indptr[i + 1]] = 0.0
         self.synapse_weight[np.isin(self._targets, indices)] = 0.0
@@ -303,6 +340,10 @@ class LIFNetwork:
         if duration <= 0:
             raise ValueError("duration must be positive")
         n_steps = int(round(duration / self.params.dt))
+        if n_steps == 0:
+            raise ValueError(
+                f"duration {duration} s is shorter than half a time step ({self.params.dt} s)"
+            )
         callbacks = tuple(callbacks)
 
         neurons: list[np.ndarray] = []
