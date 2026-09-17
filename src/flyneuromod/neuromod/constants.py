@@ -142,12 +142,21 @@ KC_TO_MBON_PLASTICITY = PlasticityParams(
     # 0.1-1 s and has no effect by ~6 s (Handler et al. 2019). tau = 2 s leaves
     # 5% of the trace at 6 s.
     tau_eligibility=2.0,
-    # calibrated in experiments/conditioning.py against the response of the
-    # output neuron after one pairing: 90 +/- 4% loss for the trained odour and
-    # about 25% for an overlapping control odour (Hige et al. 2015, Neuron
-    # 88:985). Units are fractions of the synaptic weight per second.
-    rate_depression=0.8,
-    rate_potentiation=0.4,
+    # calibrated in experiments/conditioning.py against the synaptic measurement
+    # of Hige et al. 2015, Neuron 88:985: one pairing removes about 90% of the
+    # charge transferred by the trained Kenyon cells' synapses onto
+    # MBON-gamma1pedc. Units are fractions of the synaptic weight per second.
+    #
+    # The same paper also reports the spiking response of that neuron falling by
+    # about 80%, which this model cannot match at the same time: with its output
+    # neuron isolated from the rest of the brain, a given loss of synaptic drive
+    # costs it more spikes than it costs the fly. Calibrating on the synaptic
+    # number keeps the fitted parameter attached to the quantity the rule
+    # actually describes. See docs/validation.md.
+    rate_depression=1.2,
+    # assumed: no measurement of the potentiating arm's size exists, only its
+    # existence and sign (Handler et al. 2019). Half the depression rate.
+    rate_potentiation=0.6,
     min_fraction=0.0,
     max_fraction=1.5,
     # Forgetting in the fly is an active, dopamine-driven process through Dop1R2
