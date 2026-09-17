@@ -312,7 +312,10 @@ class LIFNetwork:
             spiking = self.step()
             if record and spiking.size:
                 neurons.append(spiking)
-                times.append(np.full(spiking.size, (step_index + 1) * self.params.dt))
+                # Brian 2 labels a spike with the clock time of the step that
+                # produced it, so the first step is t = 0; matching that keeps
+                # spike trains comparable with the reference simulator
+                times.append(np.full(spiking.size, step_index * self.params.dt))
             for callback in callbacks:
                 callback(self, step_index, spiking)
 
