@@ -1,0 +1,189 @@
+# Mushroom body compartments: the anatomical unit of dopaminergic teaching.
+#
+# Each compartment is a slab of Kenyon cell axons innervated by a specific set of
+# dopaminergic neurons and read out by a specific set of output neurons. Dopamine
+# released in one compartment changes only the Kenyon cell synapses inside it,
+# which is why the compartment - not the neuron - is the natural "field" of the
+# dopamine layer.
+#
+# Cell type names are the hemibrain/FlyWire numeric names, which the FlyWire v783
+# annotations use verbatim (cell_type column).
+#
+# Sources:
+#   Aso et al. 2014a, eLife 3:e04577, doi:10.7554/eLife.04577  (anatomy, naming)
+#   Aso et al. 2014b, eLife 3:e04580, doi:10.7554/eLife.04580  (valence of MBON activation)
+#   Li et al. 2020, eLife 9:e62576, doi:10.7554/eLife.62576    (hemibrain MB connectome)
+#
+# valence: the behaviour evoked by activating the output neurons of the compartment.
+#   Aso et al. 2014b: every aversion-driving MBON is glutamatergic, while
+#   approach-driving MBONs are GABAergic or cholinergic.
+#
+# potentiation: whether backward pairing (dopamine before Kenyon cell activity)
+#   potentiates in this compartment.
+#     measured_yes - Handler et al. 2019, Cell 178:60 (gamma4, gamma5)
+#     measured_no  - Hige et al. 2015, Neuron 88:985 (gamma1pedc: backward pairing
+#                    produced no change)
+#     unknown      - not measured; the model default is applied and flagged
+
+compartments:
+  - name: gamma1pedc
+    label: "γ1pedc"
+    dan_types: [PPL101]
+    mbon_types: [MBON11]
+    mbon_transmitter: gaba
+    valence: approach
+    potentiation: measured_no
+    note: >-
+      The best characterised compartment: PPL1-γ1pedc (MB-MP1) teaching onto
+      MBON-γ1pedc>α/β (MVP2). One pairing depresses the Kenyon cell input by
+      90 ± 4 % for at least 40 min (Hige et al. 2015).
+
+  - name: gamma1
+    label: "γ1"
+    dan_types: [PPL102]
+    mbon_types: []
+    mbon_transmitter: null
+    valence: null
+    potentiation: unknown
+
+  - name: gamma2alphaprime1
+    label: "γ2α'1"
+    dan_types: [PPL103]
+    mbon_types: [MBON12, MBON15]
+    mbon_transmitter: acetylcholine
+    valence: approach
+    potentiation: unknown
+    note: >-
+      MBON15 reads α'1; it is grouped here because γ2α'1 is the compartment its
+      dopaminergic partner PPL1-γ2α'1 (MB-MV1) innervates.
+
+  - name: gamma3
+    label: "γ3"
+    dan_types: [PAM12]
+    mbon_types: [MBON09]
+    mbon_transmitter: gaba
+    valence: approach
+    potentiation: unknown
+    note: >-
+      MBON08 (γ3) carries no separate label in the FlyWire v783 annotations, so
+      only MBON09 (γ3β'1) represents this compartment here. MBON09 also extends
+      into β'1; it is assigned to γ3.
+
+  - name: gamma4
+    label: "γ4"
+    dan_types: [PAM08, PAM07]
+    mbon_types: [MBON05]
+    mbon_transmitter: glutamate
+    valence: avoidance
+    potentiation: measured_yes
+    note: >-
+      With γ5, the compartment where the sign of plasticity was shown to flip
+      with the order of odour and dopamine (Handler et al. 2019).
+
+  - name: gamma5
+    label: "γ5"
+    dan_types: [PAM01, PAM15]
+    mbon_types: [MBON01]
+    mbon_transmitter: glutamate
+    valence: avoidance
+    potentiation: measured_yes
+    note: >-
+      MBON01 (γ5β'2a, M6) also extends into β'2a; it is assigned to γ5 here.
+      Dopaminergic activation without odour potentiates this compartment for
+      about an hour (Cohn et al. 2015, Cell 163:1742).
+
+  - name: alphaprime2alpha2
+    label: "α'2α2"
+    dan_types: [PPL105]
+    mbon_types: [MBON13, MBON18, MBON19]
+    mbon_transmitter: acetylcholine
+    valence: approach
+    potentiation: unknown
+    note: >-
+      Activating PPL1-α'2α2 shortly before retrieval blocks expression of
+      long-term memory, which recovers within about an hour
+      (Sabandal et al. 2021, Nature 591:426).
+
+  - name: alphaprime3
+    label: "α'3"
+    dan_types: [PPL104]
+    mbon_types: [MBON16, MBON17]
+    mbon_transmitter: acetylcholine
+    valence: approach
+    potentiation: unknown
+
+  - name: alpha3
+    label: "α3"
+    dan_types: [PPL106]
+    mbon_types: [MBON14]
+    mbon_transmitter: acetylcholine
+    valence: approach
+    potentiation: unknown
+    note: >-
+      Slow to learn, long to remember: barely detectable immediate memory but
+      robust four-day memory after spaced training (Aso & Rubin 2016).
+
+  - name: alpha1
+    label: "α1"
+    dan_types: [PAM11]
+    mbon_types: [MBON07]
+    mbon_transmitter: glutamate
+    valence: avoidance
+    potentiation: unknown
+    note: >-
+      The compartment most resistant to updating and extinction, and the one
+      that holds two associations at once (Aso & Rubin 2016).
+
+  - name: beta1
+    label: "β1"
+    dan_types: [PAM10]
+    mbon_types: [MBON06]
+    mbon_transmitter: glutamate
+    valence: avoidance
+    potentiation: unknown
+
+  - name: beta1ped
+    label: "β1ped"
+    dan_types: [PAM09]
+    mbon_types: []
+    mbon_transmitter: null
+    valence: null
+    potentiation: unknown
+
+  - name: beta2
+    label: "β2"
+    dan_types: [PAM04, PAM03]
+    mbon_types: [MBON02]
+    mbon_transmitter: glutamate
+    valence: avoidance
+    potentiation: unknown
+
+  - name: betaprime1
+    label: "β'1"
+    dan_types: [PAM13, PAM14]
+    mbon_types: [MBON10]
+    mbon_transmitter: gaba
+    valence: approach
+    potentiation: unknown
+
+  - name: betaprime2
+    label: "β'2"
+    dan_types: [PAM02, PAM06, PAM05]
+    mbon_types: [MBON03, MBON04]
+    mbon_transmitter: glutamate
+    valence: avoidance
+    potentiation: unknown
+
+  - name: calyx
+    label: "calyx"
+    dan_types: [PPL201]
+    mbon_types: []
+    mbon_transmitter: null
+    valence: null
+    potentiation: unknown
+
+# Dopaminergic types in the FlyWire DAN class that this table does not place in a
+# mushroom body compartment. They are still dopamine sources; they simply act
+# elsewhere, so the model releases their dopamine into their own fields rather
+# than into a compartment.
+unassigned_dan_types: [PPL107, PPL108, PPL202, PPL203, PPL204]
