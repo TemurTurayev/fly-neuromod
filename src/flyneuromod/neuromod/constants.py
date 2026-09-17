@@ -54,7 +54,7 @@ DOP1R2_GQ = ReceptorSpec(
     coupling="Gq",
 )
 
-DOP2R = ReceptorSpec(
+DAN_AUTORECEPTOR = ReceptorSpec(
     name="Dop2R",
     # assumed: Hearn et al. 2002, PNAS 99:14554 report only that dopamine is the
     # most potent agonist, with no EC50. 0.5 uM sits in the defensible 0.1-1 uM
@@ -65,8 +65,25 @@ DOP2R = ReceptorSpec(
     tau_off=5.0,  # assumed
     coupling="Gi",
 )
+"""Dop2R, the Gi-coupled receptor.
 
-DOPAMINE_RECEPTORS = (DOP1R1, DOP1R2_GQ, DOP2R)
+Its documented role in the mushroom body is presynaptic autoinhibition of the
+dopaminergic neurons themselves: blocking it with flupentixol raises evoked
+dopamine about fourfold (Shin & Venton 2022). It is therefore *not* part of the
+default receptor set on Kenyon cell terminals — putting it there with an
+arbitrary gain would simply cancel the Gs branch that drives learning. The
+release-feedback loop it belongs to is not implemented yet; until it is,
+flupentixol is modelled as increased release.
+"""
+
+KC_TERMINAL_RECEPTORS = (DOP1R1, DOP1R2_GQ)
+"""Receptors modelled on Kenyon cell terminals: the Gs and Gq branches.
+
+Both are expressed there (Kudo et al. 2025, eLife 14:RP98358) and together they
+produce the order-dependent sign of plasticity measured by Handler et al. 2019.
+"""
+
+DOPAMINE_RECEPTORS = KC_TERMINAL_RECEPTORS
 
 # ---------------------------------------------------------------------------
 # release and clearance in a mushroom body compartment
@@ -77,18 +94,25 @@ MB_COMPARTMENT_RELEASE = ReleaseKinetics(
     # compartment near 0.4 uM, the peak measured in the adult mushroom body
     # during sugar feeding and cholinergic stimulation
     # (Shin & Venton 2022, Angew Chem 61:e202207399, doi:10.1002/anie.202207399).
-    per_spike=0.0053,
-    # calibrated: with k_m fixed at the measured value, v_max is set so that the
-    # low-concentration clearance rate v_max / k_m = 0.35 1/s reproduces the
-    # measured half-decay of 1.4-2.7 s in the adult mushroom body (Shin & Venton
-    # 2022). The directly measured larval v_max of 0.11 uM/s (Vickrey et al.
-    # 2013) would give a ~12 s decay, far slower than the adult brain shows.
-    v_max=0.45,
+    per_spike=0.0059,
+    # calibrated: with k_m fixed at the measured value, transporter uptake and
+    # diffusion together give a low-concentration clearance rate of
+    # v_max / k_m + k_diffusion = 0.35 1/s, reproducing the measured half-decay of
+    # 1.4-2.7 s in the adult mushroom body (Shin & Venton 2022). The directly
+    # measured larval v_max of 0.11 uM/s (Vickrey et al. 2013) would give a ~12 s
+    # decay on its own, far slower than the adult brain shows.
+    v_max=0.30,
     # measured: diffusion-corrected K_m of the dopamine transporter, 1.3 +/- 0.6 uM
     # in the larval CNS (Vickrey et al. 2013, ACS Chem Neurosci 4:832,
     # doi:10.1021/cn400019q). No adult measurement exists.
     k_m=1.3,
     baseline=0.0,  # tonic dopamine emerges from tonic firing of the neurons
+    # assumed: about a third of the clearance is diffusion out of the
+    # compartment rather than uptake. The split is not measured; what is
+    # measured is that transporter-null flies still clear dopamine, so it cannot
+    # be zero, and that blocking uptake slows but does not abolish clearance
+    # (Makos et al. 2010).
+    k_diffusion=0.12,
 )
 
 # ---------------------------------------------------------------------------

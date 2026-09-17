@@ -218,17 +218,42 @@ class LIFNetwork:
         self._step += 1
         return spiking
 
-    def _schedule(self, spiking: np.ndarray) -> None:
-        """Add the postsynaptic increments of ``spiking`` to the delay buffer."""
-        starts = self._indptr[spiking]
-        stops = self._indptr[spiking + 1]
-        counts = stops - starts
+    def outgoing_synapses(self, pre_indices: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Locate the synapses leaving a set of neurons.
+
+        Parameters
+        ----------
+        pre_indices:
+            Presynaptic neuron indices.
+
+        Returns
+        -------
+        tuple of numpy.ndarray
+            ``(positions, presynaptic, postsynaptic)`` where ``positions`` index
+            into :attr:`synapse_weight`. This is how the neuromodulation layer
+            finds the synapses it is allowed to change.
+        """
+        pre_indices = np.asarray(pre_indices, dtype=np.int64)
+        positions = self._flat_positions(pre_indices)
+        counts = self._indptr[pre_indices + 1] - self._indptr[pre_indices]
+        return positions, np.repeat(pre_indices, counts), self._targets[positions]
+
+    def _flat_positions(self, pre_indices: np.ndarray) -> np.ndarray:
+        """Positions in ``synapse_weight`` of all synapses leaving ``pre_indices``."""
+        starts = self._indptr[pre_indices]
+        counts = self._indptr[pre_indices + 1] - starts
         total = int(counts.sum())
         if total == 0:
-            return
-        # flat gather indices for the concatenated CSR rows of all spiking neurons
+            return np.zeros(0, dtype=np.int64)
+        # flat gather indices for the concatenated CSR rows of all listed neurons
         offsets = np.repeat(starts - np.concatenate(([0], np.cumsum(counts)[:-1])), counts)
-        flat = np.arange(total, dtype=np.int64) + offsets
+        return np.arange(total, dtype=np.int64) + offsets
+
+    def _schedule(self, spiking: np.ndarray) -> None:
+        """Add the postsynaptic increments of ``spiking`` to the delay buffer."""
+        flat = self._flat_positions(spiking)
+        if flat.size == 0:
+            return
         # the slot just consumed in this step is read again exactly delay_steps later
         np.add.at(
             self._delay_buffer[self._buffer_pos], self._targets[flat], self.synapse_weight[flat]

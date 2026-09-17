@@ -32,6 +32,13 @@ class ReleaseKinetics:
     k_m:
         Michaelis constant of the transporter (micromolar). A competitive
         blocker is applied by raising it: ``k_m * (1 + [drug] / K_i)``.
+    k_diffusion:
+        First-order rate at which dopamine escapes the compartment by diffusion
+        (per second). Transporter uptake alone saturates at ``v_max``, so a
+        compartment driven harder than that would accumulate dopamine without
+        bound - which the fly brain does not do: transporter-null flies still
+        clear dopamine, and the brain is small enough for diffusion to matter
+        (Makos et al. 2010; Vickrey et al. 2013).
     baseline:
         Tonic concentration maintained in the absence of spiking (micromolar).
         A matching tonic release term is derived from it, so an unstimulated
@@ -42,6 +49,7 @@ class ReleaseKinetics:
     v_max: float
     k_m: float
     baseline: float = 0.0
+    k_diffusion: float = 0.0
 
     def __post_init__(self) -> None:
         if self.per_spike < 0:
@@ -52,13 +60,20 @@ class ReleaseKinetics:
             raise ValueError("k_m must be positive")
         if self.baseline < 0:
             raise ValueError("baseline must not be negative")
+        if self.k_diffusion < 0:
+            raise ValueError("k_diffusion must not be negative")
+
+    def clearance_at(self, concentration: float | np.ndarray) -> float | np.ndarray:
+        """Total clearance rate at a given concentration (micromolar/second)."""
+        transporter = self.v_max * concentration / (self.k_m + concentration)
+        return transporter + self.k_diffusion * concentration
 
     @property
     def tonic_release(self) -> float:
-        """Release rate that balances uptake at ``baseline`` (micromolar/second)."""
+        """Release rate that balances clearance at ``baseline`` (micromolar/second)."""
         if self.baseline == 0.0:
             return 0.0
-        return self.v_max * self.baseline / (self.k_m + self.baseline)
+        return float(self.clearance_at(self.baseline))
 
     def evolve(self, **changes: Any) -> ReleaseKinetics:
         """Return a new kinetics object with ``changes`` applied."""
@@ -119,7 +134,6 @@ class DopamineField:
 
         c = self.concentration
         c += self.kinetics.per_spike * spikes
-        uptake = self.kinetics.v_max * c / (self.kinetics.k_m + c)
-        c += self.dt * (self.kinetics.tonic_release - uptake)
+        c += self.dt * (self.kinetics.tonic_release - self.kinetics.clearance_at(c))
         np.clip(c, 0.0, None, out=c)
         return c
