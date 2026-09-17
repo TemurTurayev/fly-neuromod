@@ -142,21 +142,28 @@ KC_TO_MBON_PLASTICITY = PlasticityParams(
     # 0.1-1 s and has no effect by ~6 s (Handler et al. 2019). tau = 2 s leaves
     # 5% of the trace at 6 s.
     tau_eligibility=2.0,
-    # calibrated against the synaptic measurement of Hige et al. 2015, Neuron
-    # 88:985: one pairing (5 s odour, 5 s of 20 Hz dopaminergic firing starting
-    # 0.2 s in) removes about 90% of the trained synapses' weight onto
-    # MBON-gamma1pedc. Units: fraction of the weight per unit of Gs activation
-    # arriving onto a fully primed terminal.
+    # calibrated on the full FlyWire mushroom body against the synaptic
+    # measurement of Hige et al. 2015, Neuron 88:985: one pairing (5 s odour,
+    # 5 s of 20 Hz dopaminergic drive starting 0.2 s in) removes about 90% of the
+    # trained synapses' weight onto MBON-gamma1pedc (1.7 gives -75%, 2.1 gives
+    # -95%). Units: fraction of the weight per unit of Gs activation arriving onto
+    # a fully primed terminal.
+    #
+    # The calibration has to be done in the network, not in isolation: during
+    # the odour, Kenyon cells excite PPL1-gamma1pedc through ~14,000 synapses, so
+    # a 20 Hz drive becomes ~47 Hz of firing and ~0.9 uM of dopamine. That is the
+    # reciprocal Kenyon cell -> dopaminergic neuron loop of Cervantes-Sandoval et
+    # al. 2017 (eLife 6:e23789), appearing in the model without being put there.
     #
     # The same paper reports the spiking response of that neuron falling by about
     # 80%; the model cannot match both at once, because its isolated output neuron
     # loses more spikes for a given loss of synaptic drive. See docs/validation.md.
-    rate_depression=3.6,
+    rate_depression=2.0,
     # calibrated on the sign of the timing curve, not its size, which is not
     # measured: dopamine 1.2 s before the odour must potentiate while dopamine
     # 0.5 s after it depresses (Handler et al. 2019). The ratio to the depression
     # rate sets where the sign flips.
-    rate_potentiation=1.44,
+    rate_potentiation=0.8,
     min_fraction=0.0,
     max_fraction=1.5,
     # Forgetting in the fly is an active, dopamine-driven process through Dop1R2

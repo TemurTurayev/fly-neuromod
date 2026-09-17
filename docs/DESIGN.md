@@ -71,11 +71,27 @@ it is the wrong tool for a conditioning protocol that has to simulate a minute o
 brain time per condition, many times over, while a Python-level modulator writes
 weights every millisecond. The equivalence is a test, not a claim.
 
-**Compartment-level signalling.** cAMP and calcium are tracked per compartment,
-not per Kenyon cell. Dopamine covers the whole compartment, so all terminals in
-it see a similar signal; cell specificity comes from the eligibility trace, which
-is per synapse. This mirrors the biology, where the adenylyl cyclase acts as the
-coincidence detector between the dopamine signal and cell-specific calcium.
+**Order-selective detectors instead of a product.** The first rule multiplied
+cAMP by a presynaptic trace. It learned, and it could never tell odour-then-
+dopamine from dopamine-then-odour: dopamine lingers for seconds, so both orders
+look like overlap. A parameter scan confirmed that no receptor kinetics fix
+this. The rule now uses the two molecular detectors in the terminal with their
+known order preferences - the calcium-primed cyclase for depression, the
+IP₃-primed receptor for potentiation - and the sign flip follows.
+
+**Receptor activation per field, specificity per synapse.** Receptors and IP₃
+are tracked per compartment and hemisphere, because dopamine covers the whole
+compartment. What makes learning cell-specific is the calcium trace, which is
+per synapse.
+
+**Hemispheres are separate.** Each compartment exists twice. A dopaminergic
+neuron releases into its own side, and a Kenyon cell synapse belongs to its
+cell's side.
+
+**Protocols are timelines.** A pairing is built as a list of segments before
+anything is simulated, which made it possible to test the schedule on its own.
+The first version computed it inline and silently delivered the wrong
+intervals.
 
 **Plasticity as a factor on the anatomical weight.** Weights are stored as the
 anatomical synapse count times a learned factor in [0, 1.5]. Inhibitory synapses

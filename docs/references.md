@@ -41,6 +41,15 @@ If you use this repository, cite the data and the experiments it builds on.
 - Pribbenow, C. et al. (2022). Postsynaptic plasticity of cholinergic synapses underlies the induction and expression of appetitive and familiarity memories in *Drosophila*. *eLife* 11:e80445.
 - Noyes, N. C. & Davis, R. L. (2023). Innate and learned odour-guided behaviours utilize distinct molecular signalling pathways. *Cell Reports* 42:112026. doi:10.1016/j.celrep.2023.112026
 
+## Coincidence detection in the terminal
+
+- Yovell, Y. & Abrams, T. W. (1992). Temporal asymmetry in activation of *Aplysia* adenylyl cyclase by calcium and transmitter may explain temporal requirements of conditioning. *PNAS* 89:6526-6530. doi:10.1073/pnas.89.14.6526
+- Levin, L. R. et al. (1992). The *Drosophila* learning and memory gene *rutabaga* encodes a Ca²⁺/calmodulin-responsive adenylyl cyclase. *Cell* 68:479-489.
+- Bezprozvanny, I., Watras, J. & Ehrlich, B. E. (1991). Bell-shaped calcium-response curves of Ins(1,4,5)P3- and calcium-gated channels from endoplasmic reticulum of cerebellum. *Nature* 351:751-754. doi:10.1038/351751a0
+- Cervantes-Sandoval, I. et al. (2017). Reciprocal synapses between mushroom body and dopamine neurons form a positive feedback loop required for learning. *eLife* 6:e23789. doi:10.7554/eLife.23789
+- Barnstedt, O. et al. (2016). Memory-relevant mushroom body output synapses are cholinergic. *Neuron* 89:1237-1247.
+- Haynes, P. R., Christmann, B. L. & Griffith, L. C. (2015). A single pair of neurons links sleep to memory consolidation in *Drosophila melanogaster*. *eLife* 4:e03868.
+
 ## Neuromodulation outside the mushroom body
 
 - Pimentel, D. et al. (2016). Operation of a homeostatic sleep switch. *Nature* 536:333-337. doi:10.1038/nature19055

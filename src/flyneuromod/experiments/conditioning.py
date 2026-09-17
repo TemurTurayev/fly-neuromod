@@ -85,7 +85,7 @@ def _percent(value: float, signed: bool = False) -> str:
 
 def _fractional_loss(before: float, after: float) -> float:
     if before <= 0:
-        logger.warning("the odour evoked no response above baseline; loss is undefined")
+        logger.debug("the odour evoked no response above baseline; loss is undefined")
         return float("nan")
     return float((before - after) / before)
 

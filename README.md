@@ -34,8 +34,11 @@ spikes (0.1 ms)                    chemistry (1 ms)
   half-decay measured in the adult mushroom body.
 - **Receptors with real affinities.** Dop1R1 (Gs, EC50 0.61 µM) and Dop1R2 (Gq, EC50 0.057 µM) —
   a tenfold difference in sensitivity, which is what makes the sign of learning depend on timing.
-- **A learning rule from the fly literature.** Presynaptic, compartment-specific, three-factor,
-  and order-dependent: odour then dopamine depresses, dopamine then odour potentiates.
+- **A learning rule built from molecular coincidence detectors.** Depression is Gs activation
+  arriving onto a terminal whose calcium is already up (the order the rutabaga cyclase prefers);
+  potentiation is calcium arriving onto IP₃ that is already there (the order the IP₃ receptor
+  requires). Odour then dopamine depresses, dopamine then odour potentiates.
+- **Separate hemispheres.** The left and right mushroom bodies are separate dopamine volumes.
 - **Drugs and mutants as parameters.** Transporter blockers, synthesis inhibition, receptor
   knockouts — and SCH-23390 as a deliberately inert control, because mammalian D1 pharmacology
   does not transfer to the fly.
@@ -49,9 +52,25 @@ uv run flyneuromod download      # ~130 MB of connectome data, not stored in the
 uv run flyneuromod info          # what the connectome contains
 uv run flyneuromod conditioning  # pair an odour with dopamine, measure the output neuron
 uv run flyneuromod timing        # the sign of plasticity against the pairing interval
+uv run flyneuromod conditioning --manipulation dop1r1-null   # drugs and mutants
+uv run python scripts/validate_mushroom_body.py              # the full validation report
 ```
 
-## Five things that went wrong, and what they teach
+## Results on the real connectome
+
+On the full FlyWire v783 mushroom body (5,608 neurons, 523,784 connections):
+
+| Experiment | Fly | Model |
+| --- | --- | --- |
+| One odour–dopamine pairing in γ1pedc: trained synapses | about −90% ([Hige et al. 2015](https://doi.org/10.1016/j.neuron.2015.11.003)) | **−92%** (calibrated) |
+| Same pairing without Dop1R1 | no learning | **+0%** |
+| Dopamine 1.2 s *before* the odour, γ5 | potentiation ([Handler et al. 2019](https://doi.org/10.1016/j.cell.2019.05.040)) | **+15.7%** |
+| Dopamine with the odour / 0.5 s after | depression | **−11.2% / −9.7%** |
+| Dopamine 6 s after the odour | nothing | **+1.8%** |
+
+Full tables, including what does not match, in [`docs/validation.md`](docs/validation.md).
+
+## Seven things that went wrong, and what they teach
 
 Every one of these was found by running the model, and each is a trap for anyone building on a
 connectome.
@@ -81,24 +100,41 @@ shortly before the pairing trains it too: its Kenyon cells still carry an eligib
 dopamine arrives. The symptom is a control odour that looks almost as depressed as the trained
 one — which reads like a broken learning rule, but is a broken protocol.
 
+**6. "Dopamine × activity" cannot tell before from after.** The first rule multiplied a dopamine
+signal by a presynaptic trace. It learned, but backward pairing depressed exactly like forward
+pairing. A scan over receptor affinities, kinetics and rates never produced a sign flip: dopamine
+lingers for seconds, so both orders look like overlap to any product of concentrations. The flip
+appeared only once each arm used its own molecular detector with its own order preference — the
+calcium-primed cyclase for depression ([Yovell & Abrams 1992](https://doi.org/10.1073/pnas.89.14.6526)),
+the IP₃-primed receptor for potentiation ([Bezprozvanny et al. 1991](https://doi.org/10.1038/351751a0)).
+
+**7. The circuit talks back, so calibrate in the circuit.** During an odour, Kenyon cells excite
+PPL1-γ1pedc through ~14,000 synapses, turning a 20 Hz drive into ~47 Hz of firing and 0.9 µM of
+dopamine. That is the Kenyon cell → dopaminergic neuron loop that
+[Cervantes-Sandoval et al. 2017](https://doi.org/10.7554/eLife.23789) found necessary for learning,
+emerging from the wiring alone. A learning rate fitted on an isolated compartment was twice too
+strong in the real network.
+
 ## What it reproduces, and what it does not
 
 Reproduced:
 
 - Dopamine alone changes nothing; odour alone changes nothing; only the pairing writes anything.
-- Depression is specific to the Kenyon cells that carried the odour, and to the compartment where
-  dopamine was released.
+- Depression is specific to the Kenyon cells that carried the odour, to the compartment where
+  dopamine was released, and to that hemisphere.
 - The sign of the change follows the order of odour and dopamine, and vanishes when they are far
-  apart in time.
+  apart in time — on the real connectome, not only in a toy.
 - Removing the Gs receptor abolishes learning, as in `dumb` mutants.
 - Blocking the transporter prolongs the dopamine transient.
+- The engine matches the Brian 2 reference model spike for spike.
 
 Not yet:
 
-- **The size of the response change.** At the synapse the model reaches the depression measured by
-  Hige et al. (2015); at the output neuron the change is steeper than in the fly, because the
-  isolated mushroom body gives that neuron no input from the rest of the brain and it sits close to
-  threshold. The synaptic readout is the honest one for now.
+- **The size of the output neuron's response change.** The synapses reach the depression Hige et
+  al. measured, but the output neuron loses more spikes than the fly's: the trained odour silences
+  it and the control odour loses 62% instead of 25%. The isolated mushroom body leaves it without
+  its other inputs. The synaptic readout is the reliable one for now.
+- **The exact crossover** of the timing curve: between −1.2 and −0.5 s here, −0.5 to 0 s in the fly.
 - **Physiological Kenyon cell firing rates.** The model needs stronger drive than the fly uses,
   because APL and DPM are graded neurons that a spiking model represents poorly — they fire at
   hundreds of hertz here and dominate the circuit.

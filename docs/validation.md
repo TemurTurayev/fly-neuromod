@@ -1,55 +1,83 @@
 # Validation
 
-What the model is checked against, and how it currently does. The point of this
-file is that a claim like "the layer reproduces fly learning" should be a table
-with numbers in it, not a sentence.
+What the model is checked against, and how it does. A claim like "the layer
+reproduces fly learning" should be a table with numbers in it, not a sentence.
 
-Run the fast checks with `uv run pytest`; the ones that simulate the mushroom
-body are marked `slow` and run with `uv run pytest -m slow`.
+Fast checks: `uv run pytest`. Experiments on the full FlyWire v783 mushroom body
+(5,608 neurons, 523,784 connections): `uv run pytest -m slow`, or
+`uv run python scripts/validate_mushroom_body.py` for the report below (~5 min on
+a laptop).
 
-## Passing
+## Headline results on the real connectome
+
+**One pairing in γ1pedc** — 5 s odour on 10% of Kenyon cells, PPL1-γ1pedc driven
+at 20 Hz from 0.2 s.
+
+| Quantity | Fly (Hige et al. 2015) | Model |
+| --- | --- | --- |
+| Weight of the trained odour's synapses | about −90% | **−92%** (calibrated) |
+| Weight of all γ1pedc synapses | — | −9% (only the trained odour's cells change) |
+| Same pairing, Dop1R1 null | learning abolished | **+0%** |
+| Trained odour response of MBON-γ1pedc | about −80% | falls below spontaneous (−143%) |
+| Control odour response (20% overlap) | about −25% | −62% |
+
+**The interval curve in γ5** — PAM-γ5 driven for 1 s at intervals from a 2 s
+odour, as in Handler et al. 2019.
+
+| Dopamine onset relative to odour | Fly | Model |
+| --- | --- | --- |
+| −1.2 s (dopamine first) | potentiation | **+15.7%** |
+| −0.5 s | near the crossover | −6.0% |
+| 0 s | depression | **−11.2%** |
+| +0.5 s | depression | **−9.7%** |
+| +6 s | no change | **+1.8%** |
+
+The sign flip is not fitted. The potentiation rate sets *where* it happens, but
+no value of it can make a symmetric rule flip; the flip comes from the order
+preferences of the two coincidence detectors.
+
+## Passing (fast suite)
 
 | Test | Expectation | Source |
 | --- | --- | --- |
-| Engine equivalence | Spike-for-spike identity with the Brian 2 reference model on a random network | Shiu et al. 2024 |
-| Dopamine transient | 20 Hz of a compartment's dopaminergic population holds 0.3–0.5 µM | Shiu & Venton 2022 |
-| Clearance | Half-decay of a transient is 1.4–2.7 s | Shin & Venton 2022 |
-| Transporter block | Cocaine-like block prolongs the transient; a transporter null is slower still but still clears | Makos et al. 2010 |
-| Coincidence requirement | Dopamine alone and odour alone leave weights unchanged | Hige et al. 2015 |
-| Cell specificity | Only the Kenyon cells that carried the odour are depressed | Hige et al. 2015 |
-| Compartment specificity | Only the compartment where dopamine was released changes | Aso et al. 2014 |
-| Order dependence | Odour → dopamine depresses; dopamine → odour potentiates; a 6 s gap does nothing | Handler et al. 2019 |
-| γ1pedc exception | Backward pairing does not potentiate in γ1pedc | Hige et al. 2015 |
-| Receptor knockout | Removing the Gs receptor abolishes learning | Kim et al. 2007; Handler et al. 2019 |
-| Compartment table | Every cell type in the atlas exists in FlyWire v783, and every curated dopaminergic type is accounted for | Schlegel et al. 2024 |
+| Engine equivalence | Spike-for-spike identity with the Brian 2 reference model | Shiu et al. 2024 |
+| Dopamine transient | A compartment's population at 20 Hz holds 0.3–0.5 µM | Shin & Venton 2022 |
+| Clearance | Half-decay 1.4–2.7 s | Shin & Venton 2022 |
+| Transporter block | Slower clearance; a transporter null is slower still but still clears | Makos et al. 2010 |
+| Coincidence requirement | Dopamine alone and odour alone change nothing | Hige et al. 2015 |
+| Order | Calcium then Gs depresses; IP₃ then calcium potentiates; Gs already present when a cell starts firing does not depress | Yovell & Abrams 1992; Bezprozvanny et al. 1991 |
+| Step independence | The amount learned does not depend on the integration step | — |
+| Cell, compartment and hemisphere specificity | Only the cells, compartment and side that were paired change | Hige et al. 2015; Aso et al. 2014 |
+| γ1pedc exception | No potentiation on backward pairing | Hige et al. 2015 |
+| Receptor null, antagonist | Null abolishes depression; a competitive antagonist weakens it | Handler et al. 2019 |
+| Protocol timeline | Every interval delivered exactly, including gaps and simultaneous onset | — |
+| Atlas | Every type exists in FlyWire v783; every curated dopaminergic type is accounted for | Schlegel et al. 2024 |
 
 ## Calibrated, not predicted
 
-These are fitted, so they cannot count as successes — they are the targets the
-free parameters were set against.
-
 | Quantity | Target | Fitted parameter |
 | --- | --- | --- |
-| Peak dopamine in a compartment | 0.4 µM at 20 Hz | release per spike |
-| Half-decay of the transient | ~2 s | transporter V_max and the diffusion rate |
-| Depression after one pairing | 90% of the trained synapses | depression rate |
+| Peak dopamine | 0.4 µM at 20 Hz | release per spike |
+| Half-decay | ~2 s | transporter V_max and diffusion rate |
+| Synaptic depression after one pairing | −90% | depression rate |
+| Position of the sign flip | between −1.2 and 0 s | ratio of potentiation to depression rate |
+| Output neuron spontaneous rate | 30 Hz | tonic drive (stands in for inputs outside the mushroom body) |
 
 ## Not reproduced yet
 
-| Quantity | Fly | Model | Why |
-| --- | --- | --- | --- |
-| Loss of the trained odour response | 80–90% | matches at the synapse, steeper at the output neuron | the isolated mushroom body leaves the output neuron near threshold; a fitted tonic drive helps but does not replace its real input |
-| Loss of the control odour response | ~25% | lower or higher depending on the assumed odour overlap | the overlap between two odours is a free parameter until the antennal lobe pathway is modelled |
-| Kenyon cell firing rates | a few spikes per odour | tens of hertz needed to drive the circuit | APL and DPM are graded neurons; a spiking model makes them fire at hundreds of hertz and dominate |
-| Compartment-specific rates and retention | differ strongly between compartments | one rate for all | measured only for γ1, γ4 and γ5 |
+| Quantity | Why |
+| --- | --- |
+| Size of the output neuron's response change | The isolated mushroom body leaves its output neuron without the rest of its inputs. Even held at a fitted 30 Hz, it loses more spikes for a given loss of synaptic drive than the fly's does, so the trained odour silences it and the control odour loses 62% rather than 25%. The synaptic readout is the reliable one. |
+| MBON-γ5 odour response | In the subnetwork the odour does not raise MBON-γ5 above its spontaneous rate, so only the synaptic change is reported for γ5. |
+| Exact crossover of the timing curve | The model flips between −1.2 and −0.5 s; Handler et al. place it between −0.5 and 0 s. |
+| Kenyon cell firing rates | The circuit needs tens of hertz of drive; APL and DPM are graded neurons that a spiking model makes fire at hundreds of hertz. |
+| Compartment-specific rates and retention | Measured only for γ1, γ4 and γ5; one rate is used everywhere. |
 
-## Protocols
+## A finding along the way
 
-**Conditioning** (`flyneuromod conditioning`). Measure the response of the
-compartment's output neuron to a trained and a control odour, pair the trained
-odour with dopaminergic activation, wait, measure again. Every phase is
-separated by a rest long compared with both the eligibility trace and cAMP —
-without it the control odour is trained by accident, in two different ways.
-
-**Timing** (`flyneuromod timing`). The same pairing at a range of intervals
-between odour and dopamine, from dopamine first to dopamine seconds later.
+During the odour, Kenyon cells excite PPL1-γ1pedc through about 14,000 synapses.
+A 20 Hz optogenetic-style drive becomes ~47 Hz of firing and ~0.9 µM of
+dopamine. This is the reciprocal Kenyon cell → dopaminergic neuron loop that
+Cervantes-Sandoval et al. (2017) showed is needed for learning; it appears in
+the model from the connectome alone. It is also why the learning rate had to be
+calibrated in the network rather than on an isolated compartment.

@@ -67,18 +67,24 @@ worth naming, because it is easy to make.
 
 ## Plasticity
 
+The rule is two order-selective coincidence detectors, not a product of
+"dopamine × activity". A symmetric product was scanned over receptor affinities,
+kinetics and rate ratios and never produced the measured sign flip: dopamine
+lingers for seconds, so both orders look like overlap to it.
+
 | Parameter | Value | Confidence | Source |
 | --- | --- | --- | --- |
-| Eligibility time constant | 2 s | measured (window) | pairing works at 0.1–1 s and is gone by ~6 s: Handler et al. 2019, *Cell* 178:60. τ = 2 s leaves 5% of the trace at 6 s |
-| Sign depends on order | forward → depression, backward → potentiation | measured | Handler et al. 2019 (γ4, γ5) |
-| No potentiation in γ1pedc | backward pairing produced no change | measured | Hige et al. 2015, *Neuron* 88:985 |
-| Depression magnitude target | 90 ± 4% of the response, one pairing | measured | Hige et al. 2015 |
-| Control-odour loss | ~25% | measured | same; caused by shared Kenyon cells, not by an unspecific rule |
-| Depression persistence | ≥ 40 min | measured | same |
-| Depression rate | 1.2 per second | **calibrated** | fitted so one pairing removes ~90% of the trained synapses' weight, the synaptic measurement of Hige et al. 2015 |
-| Potentiation rate | 0.6 per second | **assumed** | only the existence and sign of the potentiating arm are measured (Handler et al. 2019), not its size; set to half the depression rate |
+| Depression detector | Gs activation arriving onto a primed (recently active) terminal | measured (biochemistry) | the Ca²⁺/calmodulin cyclase responds more when calcium precedes the transmitter: Yovell & Abrams 1992, *PNAS* 89:6526; rutabaga is that cyclase in the fly: Levin et al. 1992, *Cell* 68:479 |
+| Potentiation detector | calcium arriving onto IP₃ that is already present, scaled by the receptors not yet inhibited by calcium | measured (biochemistry) | IP₃ receptors need IP₃ bound before calcium and have a bell-shaped calcium dependence: Bezprozvanny et al. 1991, *Nature* 351:751; the Dop1R2/Gq/ER-calcium route: Handler et al. 2019 |
+| Calcium (eligibility) time constant | 2 s | measured (window) | pairing works at 0.1–1 s and is gone by ~6 s: Handler et al. 2019, *Cell* 178:60 |
+| IP₃ signal time constant | 1 s | assumed | the Gq branch is stimulus-locked and faster than cAMP |
+| Depression rate | 2.0 per unit of arriving Gs activation | **calibrated** | one pairing removes ~90% of the trained synapses' weight on the full mushroom body: Hige et al. 2015, *Neuron* 88:985. Calibrated in the network because Kenyon cells excite the dopaminergic neuron during the odour (Cervantes-Sandoval et al. 2017), more than doubling its firing |
+| Potentiation rate | 0.8 (0.4 × depression) | **calibrated (sign only)** | sets where the sign flips: dopamine 1.2 s before the odour potentiates, 0.5 s after depresses (Handler et al. 2019). The size of potentiation is not measured |
+| No potentiation in γ1pedc | backward pairing produced no change | measured | Hige et al. 2015 |
+| Control-odour loss | ~25% | measured | Hige et al. 2015; caused by shared Kenyon cells |
 | Weight bounds | 0 to 1.5 × anatomical | assumed | physiological bounds are unmeasured |
-| Passive forgetting | off | measured (as a choice) | forgetting in the fly is dopamine-driven through Dop1R2, not passive decay: Berry et al. 2012, *Neuron* 74:530 |
+| Passive forgetting | off | measured (as a choice) | forgetting in the fly is dopamine-driven through Dop1R2: Berry et al. 2012, *Neuron* 74:530 |
+| Hemispheres | separate dopamine fields | anatomy | the left and right mushroom bodies are separate volumes |
 
 ## Known unknowns
 
