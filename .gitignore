@@ -1,0 +1,21 @@
+# data (downloaded, never committed - see src/flyneuromod/data/download.py)
+data/raw/
+data/cache/
+results/
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# os / editors
+.DS_Store
+.idea/
+.vscode/
