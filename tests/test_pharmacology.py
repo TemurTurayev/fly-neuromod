@@ -4,7 +4,8 @@ import numpy as np
 import pytest
 
 from flyneuromod.neuromod import pharmacology
-from flyneuromod.neuromod.constants import DOP1R1, MB_COMPARTMENT_RELEASE
+from flyneuromod.neuromod.autoreceptor import AutoreceptorFeedback
+from flyneuromod.neuromod.constants import DAN_AUTORECEPTOR_FEEDBACK, DOP1R1, MB_COMPARTMENT_RELEASE
 from flyneuromod.neuromod.field import DopamineField
 
 
@@ -21,10 +22,13 @@ def clearance_halftime(kinetics, start=0.4, dt=1e-3) -> float:
 
 def test_default_release_matches_measured_mushroom_body_transient():
     """20 Hz of one dopaminergic neuron holds ~0.3-0.5 uM, as measured in vivo."""
+    auto = AutoreceptorFeedback(DAN_AUTORECEPTOR_FEEDBACK, n_fields=1, dt=1e-3)
     field = DopamineField(n_fields=1, kinetics=MB_COMPARTMENT_RELEASE, dt=1e-3)
     spikes_per_step = np.array([20.0 * 1e-3])
+    gain = np.ones(1)
     for _ in range(30_000):
-        field.step(spikes_per_step)
+        c = field.step(spikes_per_step, gain=gain)
+        gain = auto.step(c)
     assert 0.3 <= field.concentration[0] <= 0.5
 
 
@@ -45,10 +49,9 @@ def test_transporter_null_is_slower_than_a_blocker():
     assert fumin > cocaine
 
 
-def test_autoreceptor_block_raises_released_dopamine_fourfold():
-    control = MB_COMPARTMENT_RELEASE
-    treated = pharmacology.FLUPENTIXOL.apply_to(control)
-    assert treated.per_spike == pytest.approx(4 * control.per_spike)
+def test_autoreceptor_block_targets_dop2r():
+    assert pharmacology.FLUPENTIXOL.blocks == {"Dop2R": pytest.approx(1000.0)}
+    assert pharmacology.FLUPENTIXOL.release_factor == 1.0
 
 
 def test_synthesis_inhibition_lowers_release():

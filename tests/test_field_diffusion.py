@@ -3,7 +3,8 @@
 import numpy as np
 import pytest
 
-from flyneuromod.neuromod.constants import MB_COMPARTMENT_RELEASE
+from flyneuromod.neuromod.autoreceptor import AutoreceptorFeedback
+from flyneuromod.neuromod.constants import DAN_AUTORECEPTOR_FEEDBACK, MB_COMPARTMENT_RELEASE
 from flyneuromod.neuromod.field import DopamineField, ReleaseKinetics
 
 
@@ -34,10 +35,14 @@ def test_default_kinetics_include_diffusion():
 
 def test_physiological_drive_stays_in_the_measured_range():
     """Two dopaminergic neurons at 20 Hz hold the compartment near the measured peak."""
+
+    auto = AutoreceptorFeedback(DAN_AUTORECEPTOR_FEEDBACK, n_fields=1, dt=1e-3)
     field = DopamineField(n_fields=1, kinetics=MB_COMPARTMENT_RELEASE, dt=1e-3)
     release = np.array([2 * 20.0 * 1e-3])
+    gain = np.ones(1)
     for _ in range(30_000):
-        field.step(release)
+        c = field.step(release, gain=gain)
+        gain = auto.step(c)
     assert 0.3 <= field.concentration[0] <= 1.0
 
 

@@ -36,7 +36,7 @@ Shiu et al. 2024, *Nature* 634:210, doi:10.1038/s41586-024-07763-9.
 | Dop1R2 EC50 (Gq) | 0.057 µM | measured | Himmelreich et al. 2017 |
 | Dop1R2 activation rate | 2.71 s⁻¹ → τ 0.37 s | measured | same |
 | Dop2R coupling | Gi/o | measured | Hearn et al. 2002, *PNAS* 99:14554 |
-| Dop2R EC50 | 0.5 µM | **assumed** | Hearn et al. report only a rank order; 0.1–1 µM is the defensible range |
+| Dop2R EC50 | 0.20 µM | **calibrated** | Hearn et al. report only a rank order; 0.20 µM calibrated so presynaptic autoreceptor feedback suppresses steady-state release by ~3-4x |
 | Hill coefficients | 1.0 | assumed | no cooperativity reported |
 
 Dop2R is **not** placed on Kenyon cell terminals in the default configuration.
@@ -54,7 +54,9 @@ worth naming, because it is easy to make.
 | Transporter K_m | 1.3 µM | measured | Vickrey et al. 2013, *ACS Chem Neurosci* 4:832 (larval, diffusion-corrected). No adult value exists |
 | Transporter V_max | 0.30 µM/s | **calibrated** | set so that uptake plus diffusion reproduce the adult half-decay. The measured larval V_max of 0.11 µM/s alone gives ~12 s, far slower than the adult brain shows |
 | Diffusion out of the compartment | 0.12 s⁻¹ | **assumed** | uptake alone saturates at V_max, so a compartment driven harder than that would accumulate dopamine without bound. Transporter-null flies still clear dopamine (Makos et al. 2010), so this term cannot be zero; the split between uptake and diffusion is not measured |
-| Release per spike | 0.0059 µM | **calibrated** | so that 20 Hz firing of a compartment's dopaminergic population holds ~0.4 µM |
+| Release per spike | 0.0145 µM | **calibrated** | so that 20 Hz firing of a compartment's dopaminergic population holds ~0.35-0.4 µM with the presynaptic Dop2R autoreceptor active (only meaningful with the autoreceptor active) |
+| Dop2R max_suppression | 0.90 | **calibrated** | reproduces the ~4-fold rise in evoked dopamine when Dop2R is blocked by flupentixol (Shin & Venton 2022) |
+| Dop2R min_gain | 0.1 | **assumed** | prevents total shutoff of release under strong stimulation |
 | Release per neuron | share of the compartment's synapses onto Kenyon cells | measured (anatomy) | from the connectome; the shares within a compartment sum to one, so the calibration applies to compartments rather than to a single neuron |
 
 ## Intracellular signalling
@@ -78,8 +80,8 @@ lingers for seconds, so both orders look like overlap to it.
 | Potentiation detector | calcium arriving onto IP₃ that is already present, scaled by the receptors not yet inhibited by calcium | measured (biochemistry) | IP₃ receptors need IP₃ bound before calcium and have a bell-shaped calcium dependence: Bezprozvanny et al. 1991, *Nature* 351:751; the Dop1R2/Gq/ER-calcium route: Handler et al. 2019 |
 | Calcium (eligibility) time constant | 2 s | measured (window) | pairing works at 0.1–1 s and is gone by ~6 s: Handler et al. 2019, *Cell* 178:60 |
 | IP₃ signal time constant | 1 s | assumed | the Gq branch is stimulus-locked and faster than cAMP |
-| Depression rate | 2.0 per unit of arriving Gs activation | **calibrated** | one pairing removes ~90% of the trained synapses' weight on the full mushroom body: Hige et al. 2015, *Neuron* 88:985. Calibrated in the network because Kenyon cells excite the dopaminergic neuron during the odour (Cervantes-Sandoval et al. 2017), more than doubling its firing |
-| Potentiation rate | 0.8 (0.4 × depression) | **calibrated (sign only)** | sets where the sign flips: dopamine 1.2 s before the odour potentiates, 0.5 s after depresses (Handler et al. 2019). The size of potentiation is not measured |
+| Depression rate | 1.5 per unit of arriving Gs activation | **calibrated** | one pairing removes ~90% (-89.8%) of the trained synapses' weight on the full mushroom body: Hige et al. 2015, *Neuron* 88:985. Calibrated in the network because Kenyon cells excite the dopaminergic neuron during the odour (Cervantes-Sandoval et al. 2017), more than doubling its firing |
+| Potentiation rate | 0.6 (0.4 × depression) | **calibrated (sign only)** | rescaled alongside depression rate to preserve the 0.4 ratio that sets where the sign flips: dopamine 1.2 s before the odour potentiates, 0.5 s after depresses (Handler et al. 2019). The size of potentiation is not measured |
 | No potentiation in γ1pedc | backward pairing produced no change | measured | Hige et al. 2015 |
 | Control-odour loss | ~25% | measured | Hige et al. 2015; caused by shared Kenyon cells |
 | Weight bounds | 0 to 1.5 × anatomical | assumed | physiological bounds are unmeasured |

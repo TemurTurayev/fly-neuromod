@@ -33,7 +33,9 @@ import numpy as np
 
 from ..data.annotations import Annotations
 from ..data.connectome import Connectome
+from .autoreceptor import AutoreceptorFeedback, AutoreceptorParams
 from .constants import (
+    DAN_AUTORECEPTOR_FEEDBACK,
     DOPAMINE_RECEPTORS,
     KC_SIGNALING,
     KC_TO_MBON_PLASTICITY,
@@ -69,6 +71,8 @@ class DopamineConfig:
         Release and clearance kinetics of a compartment.
     receptors:
         Receptor types on Kenyon cell terminals. Names must be unique.
+    autoreceptor:
+        Presynaptic autoreceptor feedback loop on dopaminergic terminals (None disables).
     signaling:
         IP₃/calcium and cAMP kinetics.
     plasticity:
@@ -79,12 +83,13 @@ class DopamineConfig:
         also removes; set it to ``False`` to keep them.
     manipulation:
         A drug or mutant from :mod:`flyneuromod.neuromod.pharmacology`. Every
-        receptor it names must exist in ``receptors``.
+        receptor it names must exist in ``receptors`` or ``autoreceptor``.
     """
 
     slow_dt: float = 1e-3
     release: ReleaseKinetics = MB_COMPARTMENT_RELEASE
     receptors: tuple[ReceptorSpec, ...] = DOPAMINE_RECEPTORS
+    autoreceptor: AutoreceptorParams | None = DAN_AUTORECEPTOR_FEEDBACK
     signaling: SignalingParams = KC_SIGNALING
     plasticity: PlasticityParams = KC_TO_MBON_PLASTICITY
     remove_fast_dopamine_synapses: bool = True
@@ -99,16 +104,26 @@ class DopamineConfig:
             raise ValueError(f"receptor names must be unique, got {names}")
         if "Gs" not in {r.coupling for r in self.receptors}:
             raise ValueError("a Gs-coupled receptor is required to drive depression")
-        unknown = self.manipulation.receptors_named - set(names)
+
+        all_names = set(names)
+        if self.autoreceptor is not None:
+            all_names.add(self.autoreceptor.spec.name)
+        unknown = self.manipulation.receptors_named - all_names
         if unknown:
             raise ValueError(
                 f"{self.manipulation.name} refers to receptors {sorted(unknown)} "
-                f"that are not configured ({names}); it would silently do nothing"
+                f"that are not configured ({sorted(all_names)}); it would silently do nothing"
             )
 
+        autoreceptor_taus = (
+            [self.autoreceptor.spec.tau_on, self.autoreceptor.spec.tau_off]
+            if self.autoreceptor is not None
+            else []
+        )
         fastest = min(
             [r.tau_on for r in self.receptors]
             + [r.tau_off for r in self.receptors]
+            + autoreceptor_taus
             + [self.signaling.tau_camp, self.signaling.tau_calcium]
             + [self.plasticity.tau_eligibility, self._clearance_time()]
         )
@@ -244,7 +259,27 @@ class DopamineLayer:
             for spec in self.config.receptors
         }
         for name, ratio in manipulation.blocks.items():
-            self.receptors[name].set_competitive_antagonist(concentration=ratio, k_i=1.0)
+            if name in self.receptors:
+                self.receptors[name].set_competitive_antagonist(concentration=ratio, k_i=1.0)
+
+        if self.config.autoreceptor is not None:
+            spec = self.config.autoreceptor.spec
+            occ_scale = 0.0 if spec.name in manipulation.receptor_knockout else 1.0
+            self.autoreceptor: AutoreceptorFeedback | None = AutoreceptorFeedback(
+                self.config.autoreceptor,
+                n_fields=self.n_fields,
+                dt=dt,
+                occupancy_scale=occ_scale,
+            )
+            if spec.name in manipulation.blocks:
+                ratio = manipulation.blocks[spec.name]
+                self.autoreceptor.population.set_competitive_antagonist(
+                    concentration=ratio, k_i=1.0
+                )
+        else:
+            self.autoreceptor = None
+
+        self._autoreceptor_gain = np.ones(self.n_fields, dtype=np.float64)
 
         self.messenger = SecondMessenger(
             n_cells=self.n_fields, params=self.config.signaling, dt=dt
@@ -337,6 +372,9 @@ class DopamineLayer:
         self.field.reset()
         for population in self.receptors.values():
             population.reset()
+        if self.autoreceptor is not None:
+            self.autoreceptor.reset()
+        self._autoreceptor_gain[:] = 1.0
         self.messenger.reset()
         self.plasticity.reset()
         self._dan_spike_count[:] = 0.0
@@ -376,7 +414,11 @@ class DopamineLayer:
             weights=self._dan_spike_count * self.targets.dan_release_weight,
             minlength=self.n_fields,
         )
-        concentration = self.field.step(release)
+        gain = self._autoreceptor_gain if self.autoreceptor is not None else None
+        concentration = self.field.step(release, gain=gain)
+
+        if self.autoreceptor is not None:
+            self._autoreceptor_gain = self.autoreceptor.step(concentration)
 
         occupancy = {
             name: population.step(concentration) for name, population in self.receptors.items()

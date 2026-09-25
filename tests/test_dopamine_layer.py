@@ -210,9 +210,12 @@ def test_manipulations_naming_absent_receptors_are_refused():
     typo = pharmacology.Manipulation(name="typo", receptor_knockout=("Dop1R2",))
     with pytest.raises(ValueError, match="not configured"):
         DopamineConfig(manipulation=typo)
+    absent_block = pharmacology.Manipulation(name="x", receptor_block=(("DopEcR", 1.0),))
+    with pytest.raises(ValueError, match="not configured"):
+        DopamineConfig(manipulation=absent_block)
     autoreceptor_block = pharmacology.Manipulation(name="x", receptor_block=(("Dop2R", 1.0),))
     with pytest.raises(ValueError, match="not configured"):
-        DopamineConfig(manipulation=autoreceptor_block)
+        DopamineConfig(autoreceptor=None, manipulation=autoreceptor_block)
 
 
 def test_duplicate_receptor_names_are_refused():

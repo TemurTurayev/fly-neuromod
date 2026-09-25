@@ -111,7 +111,9 @@ class DopamineField:
         """Return every field to its baseline concentration."""
         self.concentration[:] = self.kinetics.baseline
 
-    def step(self, spikes: np.ndarray) -> np.ndarray:
+    def step(
+        self, spikes: np.ndarray, gain: np.ndarray | float | None = None
+    ) -> np.ndarray:
         """Advance the concentrations by one ``dt``.
 
         Parameters
@@ -120,6 +122,8 @@ class DopamineField:
             Number of dopaminergic spikes delivered to each field during this
             step; fractional values are allowed (a field can pool the spikes of
             several neurons weighted by their number of release sites).
+        gain:
+            Presynaptic release gain multiplier per field (default 1.0).
 
         Returns
         -------
@@ -132,8 +136,17 @@ class DopamineField:
                 f"expected {self.n_fields} release values, got shape {spikes.shape}"
             )
 
+        if gain is None:
+            effective_gain: float | np.ndarray = 1.0
+        else:
+            effective_gain = np.asarray(gain, dtype=np.float64)
+            if effective_gain.shape != () and effective_gain.shape != (self.n_fields,):
+                raise ValueError(
+                    f"expected gain shape () or ({self.n_fields},), got {effective_gain.shape}"
+                )
+
         c = self.concentration
-        c += self.kinetics.per_spike * spikes
+        c += self.kinetics.per_spike * effective_gain * spikes
         c += self.dt * (self.kinetics.tonic_release - self.kinetics.clearance_at(c))
         np.clip(c, 0.0, None, out=c)
         return c.copy()

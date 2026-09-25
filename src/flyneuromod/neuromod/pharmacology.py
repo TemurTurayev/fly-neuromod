@@ -115,12 +115,13 @@ FUMIN = Manipulation(
 
 FLUPENTIXOL = Manipulation(
     name="flupentixol",
-    release_factor=4.0,
+    receptor_block=(("Dop2R", 1000.0),),
     note=(
         "Blocks the Dop2R autoreceptor, which normally suppresses release: evoked "
         "dopamine in the mushroom body rises from 0.31 to 1.2 uM, about fourfold "
-        "(Shin & Venton 2022). Modelled as increased release until the autoreceptor "
-        "feedback loop itself is implemented."
+        "(Shin & Venton 2022). Calibrated: saturating competitive block of Dop2R "
+        "([antagonist]/K_i = 1000) shifts apparent EC50 >1000-fold, preventing "
+        "autoreceptor activation and restoring unsuppressed release."
     ),
 )
 

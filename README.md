@@ -62,11 +62,11 @@ On the full FlyWire v783 mushroom body (5,608 neurons, 523,784 connections):
 
 | Experiment | Fly | Model |
 | --- | --- | --- |
-| One odour–dopamine pairing in γ1pedc: trained synapses | about −90% ([Hige et al. 2015](https://doi.org/10.1016/j.neuron.2015.11.003)) | **−92%** (calibrated) |
+| One odour–dopamine pairing in γ1pedc: trained synapses | about −90% ([Hige et al. 2015](https://doi.org/10.1016/j.neuron.2015.11.003)) | **−90%** (calibrated) |
 | Same pairing without Dop1R1 | no learning | **+0%** |
-| Dopamine 1.2 s *before* the odour, γ5 | potentiation ([Handler et al. 2019](https://doi.org/10.1016/j.cell.2019.05.040)) | **+15.7%** |
-| Dopamine with the odour / 0.5 s after | depression | **−11.2% / −9.7%** |
-| Dopamine 6 s after the odour | nothing | **+1.8%** |
+| Dopamine 1.2 s *before* the odour, γ5 | potentiation ([Handler et al. 2019](https://doi.org/10.1016/j.cell.2019.05.040)) | **+14.6%** |
+| Dopamine with the odour / 0.5 s after | depression | **−16.9% / −14.7%** |
+| Dopamine 6 s after the odour | nothing | **+3.0%** |
 
 Full tables, including what does not match, in [`docs/validation.md`](docs/validation.md).
 
@@ -132,14 +132,14 @@ Not yet:
 
 - **The size of the output neuron's response change.** The synapses reach the depression Hige et
   al. measured, but the output neuron loses more spikes than the fly's: the trained odour silences
-  it and the control odour loses 62% instead of 25%. The isolated mushroom body leaves it without
+  it and the control odour loses 58% instead of 25%. The isolated mushroom body leaves it without
   its other inputs. The synaptic readout is the reliable one for now.
 - **The exact crossover** of the timing curve: between −1.2 and −0.5 s here, −0.5 to 0 s in the fly.
 - **Physiological Kenyon cell firing rates.** The model needs stronger drive than the fly uses,
   because APL and DPM are graded neurons that a spiking model represents poorly — they fire at
   hundreds of hertz here and dominate the circuit.
-- Compartment-specific learning rates and retention, the Dop2R autoreceptor loop, excitability
-  modulation outside the mushroom body, co-transmission, and any modulator other than dopamine.
+- Compartment-specific learning rates and retention, excitability modulation outside the mushroom body,
+  co-transmission, and any modulator other than dopamine.
 
 ## Documentation
 

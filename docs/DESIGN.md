@@ -32,9 +32,10 @@ spikes (0.1 ms)                    chemistry (1 ms)
 │ LIFNetwork           │ spikes   │ DopamineLayer                          │
 │  138,639 neurons     ├─────────►│  pool DAN spikes per compartment       │
 │  15.1 M connections  │          │  DopamineField   release + DAT uptake  │
-│                      │          │  ReceptorPopulation  Dop1R1 / Dop1R2   │
-│  synapse_weight  ◄───┼──────────┤  SecondMessenger  cAMP, calcium        │
-│  (written in place)  │ weights  │  SynapticPlasticity  KC → MBON         │
+│                      │          │  AutoreceptorFeedback  Dop2R feedback  │
+│  synapse_weight  ◄───┼──────────┤  ReceptorPopulation  Dop1R1 / Dop1R2   │
+│  (written in place)  │ weights  │  SecondMessenger  cAMP, calcium        │
+│                      │          │  SynapticPlasticity  KC → MBON         │
 └──────────────────────┘          └────────────────────────────────────────┘
 ```
 
@@ -42,7 +43,11 @@ The two layers run at different steps because their timescales differ by four
 orders of magnitude. The dopamine layer is a step callback: the network calls it
 after every step, it accumulates spikes, and every tenth call it advances its own
 state and writes new weights into the array the network is already using. There
-is no copying and no second simulator.
+is no copying and no second simulator. Presynaptic autoinhibition runs in the
+slow layer alongside receptor activation: per slow step, `AutoreceptorFeedback`
+steps Dop2R occupancy and computes a release gain `gain = 1 - max_suppression * occupancy`
+clipped to `[min_gain, 1]`. To prevent algebraic loops, each step applies the
+gain computed from the *previous* slow step's concentration.
 
 ## Components
 
@@ -53,6 +58,7 @@ is no copying and no second simulator.
 | `data/connectome.py` | FlyWire tables to a signed sparse matrix; subnetworks. |
 | `data/annotations.py` | Curated cell identity, kept separate from predicted transmitter. |
 | `neuromod/field.py` | Extracellular dopamine: release, Michaelis-Menten uptake. |
+| `neuromod/autoreceptor.py` | Presynaptic Dop2R autoreceptor feedback loop. |
 | `neuromod/receptors.py` | Hill-curve occupancy with kinetics; cAMP and calcium. |
 | `neuromod/plasticity.py` | The three-factor, order-dependent rule. |
 | `neuromod/mb_atlas.py` | The 16 compartments and their cell types. |
@@ -108,9 +114,6 @@ per-type co-transmission is future work.
 - **Odour input through the antennal lobe.** An odour here is a random sparse set
   of Kenyon cells. Real odour identity needs the projection neuron pathway and
   receptor response data; it does not change the plasticity rule being tested.
-- **The Dop2R autoreceptor loop.** Blocking it quadruples released dopamine, so
-  it matters; until the loop is implemented, that drug is modelled as increased
-  release, which is stated where it happens.
 - **Excitability modulation outside the mushroom body.** The sleep-control
   neurons are the one quantified case (Pimentel et al. 2016) and are the natural
   next target.
@@ -122,7 +125,6 @@ per-type co-transmission is future work.
 
 1. Validation suite against published experiments: timing dependence, receptor
    knockouts, compartment-specific retention, output-neuron valence.
-2. The Dop2R autoreceptor and release-dependent depression.
-3. Excitability as a second effector, starting with the sleep-control circuit.
-4. Co-transmission per dopaminergic cell type.
-5. Octopamine and serotonin on the same scaffolding.
+2. Excitability as a second effector, starting with the sleep-control circuit.
+3. Co-transmission per dopaminergic cell type.
+4. Octopamine and serotonin on the same scaffolding.

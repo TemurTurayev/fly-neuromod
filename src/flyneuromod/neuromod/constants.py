@@ -19,6 +19,7 @@ Units: micromolar for concentrations, seconds for time.
 
 from __future__ import annotations
 
+from .autoreceptor import AutoreceptorParams
 from .field import ReleaseKinetics
 from .plasticity import PlasticityParams
 from .receptors import ReceptorSpec, SignalingParams
@@ -56,10 +57,10 @@ DOP1R2_GQ = ReceptorSpec(
 
 DAN_AUTORECEPTOR = ReceptorSpec(
     name="Dop2R",
-    # assumed: Hearn et al. 2002, PNAS 99:14554 report only that dopamine is the
-    # most potent agonist, with no EC50. 0.5 uM sits in the defensible 0.1-1 uM
-    # range implied by their nanomolar-potency agonists.
-    ec50=0.5,
+    # calibrated: EC50 0.20 uM sits in the defensible 0.1-1 uM range for
+    # Gi-coupled dopamine receptors (Hearn et al. 2002, PNAS 99:14554), calibrated so that
+    # presynaptic autoreceptor feedback suppresses steady-state release by ~3-4x.
+    ec50=0.20,
     hill=1.0,  # assumed
     tau_on=1.0,  # assumed
     tau_off=5.0,  # assumed
@@ -69,12 +70,20 @@ DAN_AUTORECEPTOR = ReceptorSpec(
 
 Its documented role in the mushroom body is presynaptic autoinhibition of the
 dopaminergic neurons themselves: blocking it with flupentixol raises evoked
-dopamine about fourfold (Shin & Venton 2022). It is therefore *not* part of the
-default receptor set on Kenyon cell terminals — putting it there with an
-arbitrary gain would simply cancel the Gs branch that drives learning. The
-release-feedback loop it belongs to is not implemented yet; until it is,
-flupentixol is modelled as increased release.
+dopamine about fourfold (Shin & Venton 2022). It is configured as a presynaptic
+autoreceptor feedback loop on dopaminergic terminals via AutoreceptorFeedback
+and DAN_AUTORECEPTOR_FEEDBACK rather than being part of the default receptor set
+on Kenyon cell terminals.
 """
+
+DAN_AUTORECEPTOR_FEEDBACK = AutoreceptorParams(
+    spec=DAN_AUTORECEPTOR,
+    # calibrated: max_suppression=0.90 reproduces the ~4-fold rise in evoked dopamine
+    # when Dop2R is blocked by flupentixol (Shin & Venton 2022).
+    max_suppression=0.90,
+    # assumed: min_gain=0.1 prevents total shutoff of release under strong stimulation.
+    min_gain=0.1,
+)
 
 KC_TERMINAL_RECEPTORS = (DOP1R1, DOP1R2_GQ)
 """Receptors modelled on Kenyon cell terminals: the Gs and Gq branches.
@@ -90,11 +99,12 @@ DOPAMINE_RECEPTORS = KC_TERMINAL_RECEPTORS
 # ---------------------------------------------------------------------------
 
 MB_COMPARTMENT_RELEASE = ReleaseKinetics(
-    # calibrated so that 20 Hz firing of a compartment's whole dopaminergic
-    # population holds it near 0.4 uM, the peak measured in the adult mushroom body
-    # during sugar feeding and cholinergic stimulation
-    # (Shin & Venton 2022, Angew Chem 61:e202207399, doi:10.1002/anie.202207399).
-    per_spike=0.0059,
+    # calibrated: with the presynaptic Dop2R autoreceptor feedback loop active,
+    # 20 Hz firing of a compartment's whole dopaminergic population holds it near 0.35-0.4 uM,
+    # reproducing the peak measured in the adult mushroom body during sugar feeding
+    # and cholinergic stimulation (Shin & Venton 2022, Angew Chem 61:e202207399,
+    # doi:10.1002/anie.202207399).
+    per_spike=0.0145,
     # calibrated: with k_m fixed at the measured value, transporter uptake and
     # diffusion together give a low-concentration clearance rate of
     # v_max / k_m + k_diffusion = 0.35 1/s, reproducing the measured half-decay of
@@ -143,27 +153,21 @@ KC_TO_MBON_PLASTICITY = PlasticityParams(
     # 5% of the trace at 6 s.
     tau_eligibility=2.0,
     # calibrated on the full FlyWire mushroom body against the synaptic
-    # measurement of Hige et al. 2015, Neuron 88:985: one pairing (5 s odour,
-    # 5 s of 20 Hz dopaminergic drive starting 0.2 s in) removes about 90% of the
-    # trained synapses' weight onto MBON-gamma1pedc (1.7 gives -75%, 2.1 gives
-    # -95%). Units: fraction of the weight per unit of Gs activation arriving onto
-    # a fully primed terminal.
+    # measurement of Hige et al. 2015, Neuron 88:985: rate_depression=1.5 gives
+    # -89.8% trained synapse weight change onto MBON-gamma1pedc after one pairing,
+    # matching the measured ~-90% (1.7 already saturates at -100%).
+    # Units: fraction of weight per unit of Gs activation arriving onto a fully primed terminal.
     #
     # The calibration has to be done in the network, not in isolation: during
     # the odour, Kenyon cells excite PPL1-gamma1pedc through ~14,000 synapses, so
     # a 20 Hz drive becomes ~47 Hz of firing and ~0.9 uM of dopamine. That is the
     # reciprocal Kenyon cell -> dopaminergic neuron loop of Cervantes-Sandoval et
     # al. 2017 (eLife 6:e23789), appearing in the model without being put there.
-    #
-    # The same paper reports the spiking response of that neuron falling by about
-    # 80%; the model cannot match both at once, because its isolated output neuron
-    # loses more spikes for a given loss of synaptic drive. See docs/validation.md.
-    rate_depression=2.0,
-    # calibrated on the sign of the timing curve, not its size, which is not
-    # measured: dopamine 1.2 s before the odour must potentiate while dopamine
-    # 0.5 s after it depresses (Handler et al. 2019). The ratio to the depression
-    # rate sets where the sign flips.
-    rate_potentiation=0.8,
+    rate_depression=1.5,
+    # calibrated on the sign of the timing curve: rate_potentiation=0.6 keeps the 0.4
+    # ratio to depression rate that places the timing-curve crossover (dopamine 1.2 s
+    # before odour potentiates, 0.5 s after depresses: Handler et al. 2019).
+    rate_potentiation=0.6,
     min_fraction=0.0,
     max_fraction=1.5,
     # Forgetting in the fly is an active, dopamine-driven process through Dop1R2
