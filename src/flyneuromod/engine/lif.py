@@ -109,11 +109,17 @@ class LIFNetwork:
 
         # exact propagator over one time step
         dt, tau_m, tau_s = params.dt, params.tau_membrane, params.tau_synapse
-        self._decay_v = float(np.exp(-dt / tau_m))
+        decay_v = float(np.exp(-dt / tau_m))
         self._decay_g = float(np.exp(-dt / tau_s))
-        self._g_to_v = float(tau_s / (tau_s - tau_m) * (self._decay_g - self._decay_v))
+        g_to_v = float(tau_s / (tau_s - tau_m) * (self._decay_g - decay_v))
+        # per neuron, so that a modulator can change the leak of some cells
+        # (set_potassium_conductance); filled with the scalar values, so the
+        # arithmetic of an unmodulated network is unchanged bit for bit
+        self._decay_v = np.full(self.n_neurons, decay_v, dtype=np.float64)
+        self._g_to_v = np.full(self.n_neurons, g_to_v, dtype=np.float64)
+        self.v_rest = np.full(self.n_neurons, params.v_rest, dtype=np.float64)
 
-        self.v = np.full(self.n_neurons, params.v_rest, dtype=np.float64)
+        self.v = self.v_rest.copy()
         self.g = np.zeros(self.n_neurons, dtype=np.float64)
         self._refractory_left = np.zeros(self.n_neurons, dtype=np.int32)
         # steps a neuron stays blocked *after* the step in which it spiked, so that it
@@ -225,12 +231,66 @@ class LIFNetwork:
             self.synapse_weight[self._indptr[i] : self._indptr[i + 1]] = 0.0
         self.synapse_weight[np.isin(self._targets, indices)] = 0.0
 
+    def set_potassium_conductance(
+        self,
+        indices: Sequence[int] | np.ndarray,
+        k: float | Sequence[float] | np.ndarray,
+        e_k: float,
+    ) -> None:
+        """Add a potassium leak conductance to some neurons.
+
+        ``k`` is the added conductance in units of the resting leak conductance.
+        A conductance does two things a current cannot: it pulls the membrane
+        toward ``e_k`` and it lowers the input resistance, so the same synaptic
+        drive moves the membrane less (shunting). With
+        ``tau_m dv/dt = -(1 + k)(v - v_rest_eff) + g`` the effective time constant
+        is ``tau_m / (1 + k)``, the resting point is
+        ``(v_rest + k e_k) / (1 + k)`` and the synaptic term of the exact
+        propagator carries a factor ``1 / (1 + k)``. Only ``indices`` are
+        recomputed; ``k = 0`` reproduces the default propagator exactly.
+        """
+        e_k_val = float(e_k)
+        if not np.isfinite(e_k_val):
+            raise ValueError("e_k must be finite")
+
+        idx = np.asarray(indices, dtype=np.int64)
+        self._check_indices(idx)
+
+        k_arr = np.asarray(k, dtype=np.float64)
+        if not np.all(np.isfinite(k_arr)):
+            raise ValueError("k must be finite")
+        if np.any(k_arr < 0.0):
+            raise ValueError("k must be non-negative")
+
+        if idx.size == 0:
+            return
+
+        if k_arr.ndim == 1 and k_arr.shape[0] != idx.shape[0]:
+            raise ValueError(f"k shape {k_arr.shape} does not match indices shape {idx.shape}")
+        if k_arr.ndim > 1:
+            raise ValueError("k must be a scalar or 1D array")
+
+        dt, tau_m, tau_s = self.params.dt, self.params.tau_membrane, self.params.tau_synapse
+        v_rest_base = self.params.v_rest
+
+        tau_eff = tau_m / (1.0 + k_arr)
+        if np.any(np.isclose(tau_eff, tau_s, rtol=1e-12, atol=1e-15)) or np.any(tau_eff == tau_s):
+            raise ValueError("tau_eff equals tau_synapse; exact propagator is singular")
+
+        v_rest_eff = (v_rest_base + k_arr * e_k_val) / (1.0 + k_arr)
+        decay_v = np.exp(-dt / tau_eff)
+        g_to_v = (1.0 / (1.0 + k_arr)) * (tau_s / (tau_s - tau_eff)) * (self._decay_g - decay_v)
+
+        self._decay_v[idx] = decay_v
+        self._g_to_v[idx] = g_to_v
+        self.v_rest[idx] = v_rest_eff
+
     # ------------------------------------------------------------------
     # simulation
     # ------------------------------------------------------------------
     def reset_state(self) -> None:
         """Return membrane potentials, synaptic drive and buffers to rest."""
-        self.v[:] = self.params.v_rest
+        self.v[:] = self.v_rest
         self.g[:] = 0.0
         self._refractory_left[:] = 0
         self._delay_buffer[:] = 0.0
@@ -244,9 +304,9 @@ class LIFNetwork:
         # exact integration of the linear subthreshold dynamics
         v, g = self.v, self.g
         v[active] = (
-            self.params.v_rest
-            + (v[active] - self.params.v_rest) * self._decay_v
-            + g[active] * self._g_to_v
+            self.v_rest[active]
+            + (v[active] - self.v_rest[active]) * self._decay_v[active]
+            + g[active] * self._g_to_v[active]
         )
         g[active] *= self._decay_g
         np.subtract(
