@@ -59,6 +59,14 @@ p{margin:0;max-width:64ch}
 .pill.ltp{background:rgba(255,184,77,.14);color:var(--focus);border:1px solid rgba(255,184,77,.4)}
 .pill.none{background:var(--panel-2);color:var(--muted);border:1px solid var(--line-2)}
 .vtxt{font-size:13.5px;color:#cfd5de}
+.mission{display:grid;gap:6px}
+.status{font-size:13px;color:var(--muted);line-height:1.45}
+.status.ok{color:var(--kc)}
+.maze{display:grid;gap:4px}
+#maze{width:100%;height:150px;display:block;background:#080a0e;border:1px solid var(--line);border-radius:8px}
+.maze .cap{font-size:13.5px;color:#dfe4eb;line-height:1.4}
+.maze .fine{font:10.5px/1.4 var(--mono);color:var(--faint)}
+.readouts.small .ro b{font-size:14px}
 .ctl{display:grid;gap:4px}
 .ctl-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
 .ctl label,.ctl .lbl{font:600 13.5px/1.3 var(--body)}
@@ -214,12 +222,21 @@ footer{padding-block:40px 60px;display:grid;gap:10px;font-size:14px;color:var(--
     </div>
 
     <div class="panel glass">
-      <div class="readouts">
+      <div class="mission">
+        <span class="lbl" data-t="m.label" style="font:600 13.5px/1.3 var(--body)"></span>
+        <div class="chips" id="missions" role="group"></div>
+        <div class="status" id="m-status"></div>
+      </div>
+      <div class="maze">
+        <canvas id="maze" aria-label="T-maze: ten flies choose between the smell and fresh air"></canvas>
+        <div class="cap" id="maze-cap"></div>
+        <div class="fine" data-t="maze.fine"></div>
+      </div>
+      <div class="readouts small">
         <div class="ro"><b id="r-dw">–</b><span data-t="ro.dw"></span></div>
         <div class="ro"><b id="r-peak">–</b><span data-t="ro.peak"></span></div>
         <div class="ro"><b id="r-brake">–</b><span data-t="ro.brake"></span></div>
       </div>
-      <div class="verdict"><span class="pill none" id="verdict"></span><span class="vtxt" id="verdict-txt"></span></div>
       <div class="ctl">
         <div class="ctl-top"><label for="onset" data-t="c.onset"></label><output id="o-onset" for="onset"></output></div>
         <input type="range" id="onset" min="-4" max="8" step="0.1" value="0.5">
@@ -257,6 +274,15 @@ footer{padding-block:40px 60px;display:grid;gap:10px;font-size:14px;color:var(--
     <div class="card fact"><b>139,248</b><span data-t="f1"></span></div>
     <div class="card fact"><b>~7,000</b><span data-t="f2"></span></div>
     <div class="card fact"><b>15,091,983</b><span data-t="f3"></span></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head"><div class="eyebrow" data-t="s7.eb"></div><h2 data-t="s7.h"></h2></div>
+  <div class="detectors">
+    <div class="card det"><h3 data-t="r1.h" style="color:var(--kc)"></h3><p data-t="r1.p"></p></div>
+    <div class="card det"><h3 data-t="r2.h" style="color:var(--da)"></h3><p data-t="r2.p"></p></div>
+    <div class="card det"><h3 data-t="r3.h"></h3><p data-t="r3.p"></p></div>
   </div>
 </div></section>
 
@@ -374,31 +400,49 @@ en: {
   cue: "how it works, and where the numbers come from ↓",
   "drug.none": "None", "drug.d1null": "Block the receptor", "drug.flu": "Remove the brake", "drug.coc": "Cocaine", "drug.fumin": "No dopamine pump", "drug.iodo": "Less dopamine",
   "dn.none": "A normal fly.",
-  "dn.d1null": "A fly without Dop1R1, the receptor that makes the connection weaker. Watch what is left.",
-  "dn.flu": "Flupentixol blocks Dop2R, the brake dopamine neurons put on themselves. About four times more dopamine.",
-  "dn.coc": "Cocaine slows the pump that clears dopamine away, so it lingers longer.",
-  "dn.fumin": "The fumin mutant has no dopamine pump at all. Dopamine drifts away only slowly.",
-  "dn.iodo": "3-iodotyrosine blocks dopamine production, so each spike releases less.",
+  "dn.d1null": "The receptor that weakens the connection is gone, so the teacher can only strengthen it. (Dop1R1 mutant)",
+  "dn.flu": "The dopamine neurons' own brake is off, so the teacher shouts about four times louder. (flupentixol blocks Dop2R)",
+  "dn.coc": "Dopamine is not cleared away, so the teacher keeps talking longer. In people this is why cocaine is addictive: it fakes the \"this matters\" signal. (cocaine blocks the dopamine pump)",
+  "dn.fumin": "There is no dopamine pump at all, so the teacher's voice lingers. (fumin mutant)",
+  "dn.iodo": "Less dopamine is made, so the teacher whispers. (3-iodotyrosine)",
   "ch.2": "Kenyon cells", "ch.6": "Dopamine neurons of γ5", "ch.7": "Avoid neuron (MBON-γ5)", "ch.3": "Other dopamine neurons",
   "ch.4": "Other output neurons", "ch.5": "Another learning circuit (γ1pedc)", "ch.0": "Rest of the brain", "ch.1": "Visual system",
   "ch.w": "Real connections", "ch.s": "Brain outline and regions",
   "tl.smell": "smell", "tl.da": "dopamine", "tl.level": "dopamine level", "tl.w": "connection",
   "tag.live": "memory spot γ5", "tag.al": "Antennal lobe: smells arrive here", "tag.ca": "Calyx: Kenyon cells", "tag.ped": "Stalk", "tag.g5": "γ5: where the memory is written",
   "tag.mbon": "Avoid neuron", "tag.pam": "Dopamine neurons", "tag.mb": "Mushroom body",
+  "m.label": "Your mission",
+  "m.avoid": "Make it avoid the smell",
+  "m.like": "Make it go to the smell",
+  "m.ok": "Done! Tries: {n}.",
+  "m.try.avoid": "Not yet. Hint: dopamine is the teacher. What if it arrives before the smell?",
+  "m.try.like": "Not yet. Hint: let the teacher arrive just after the smell starts.",
+  "maze.cap": "After training, {n} of 10 flies walk to the smell. Before training: 5 of 10.",
+  "maze.smell": "smell",
+  "maze.air": "fresh air",
+  "maze.fine": "Schematic: the model computes the connection; turning it into a choice is our illustration.",
+  "s7.eb": "Who does what",
+  "s7.h": "Acetylcholine holds the memory. Dopamine teaches.",
+  "r1.h": "Acetylcholine: the message",
+  "r1.p": "Kenyon cells talk to the avoid neuron with acetylcholine. The strength of that connection is the memory.",
+  "r2.h": "Dopamine: the teacher",
+  "r2.p": "Dopamine stores nothing. It arrives when something matters and tells the connection to change, stronger or weaker depending on its timing.",
+  "r3.h": "And in people?",
+  "r3.p": "A similar division of labour. Memories are stored mostly in glutamate synapses. Acetylcholine helps attention and learning, which is why Alzheimer's drugs protect it. Dopamine signals that something was worth learning.",
   steps: [
     ["This is the whole brain of a fruit fly", "It is about the size of a poppy seed. Every glowing point is one real neuron in its real place, 139,248 of them, all traced from electron-microscope images of a single fly's brain."],
     ["A smell arrives", "Smells are picked up by the antennae and land first in the antennal lobes, the round regions at the front. From there the signal travels up to a structure called the mushroom body."],
     ["The mushroom body is the fly's learning centre", "About 5,000 neurons called Kenyon cells live here. Each smell switches on a different small group of them, like a barcode. Watch the green cells flicker: that is the smell."],
-    ["Their wires meet an \"avoid\" neuron", "These glowing threads are real connections from the map: 2,556 Kenyon cells send wires to one output neuron (blue). When that neuron fires, the fly tends to move away from the smell."],
-    ["Dopamine: the teaching signal", "When something important happens, dopamine neurons (pink) fire and flood this tiny spot with dopamine. The pink cloud is the dopamine, in the spot where the wires meet."],
-    ["A memory is a changed connection", "Dopamine has weakened the wires from the cells this smell switched on. Watch them dim. Now this smell speaks more quietly to the avoid neuron, so the fly avoids it less."],
-    ["The twist: timing", "Arrive half a second after the smell and dopamine weakens the connection. Arrive a second before and the same dopamine strengthens it. Your turn: move the slider and see."],
+    ["Their wires meet an \"avoid\" neuron", "These glowing threads are real connections from the map: 2,556 Kenyon cells send wires to one output neuron (blue). They talk to it with acetylcholine, and when it fires, the fly tends to move away from the smell."],
+    ["Dopamine: the teacher", "Dopamine does not carry the memory itself. When something important happens, dopamine neurons (pink) flood this spot and tell the acetylcholine connections to get weaker or stronger. The pink cloud is the dopamine."],
+    ["A memory is a changed connection", "The teacher has weakened the connections from the cells this smell switched on. Watch them dim. The smell now speaks more quietly to the avoid neuron, so the fly avoids it less."],
+    ["Your turn", "Timing is everything. If the teacher arrives half a second after the smell, the connection weakens; a second before, it gets stronger. Your mission: make the fly avoid the smell. The little maze shows what the fly would do."],
   ],
   "s0.eb": "What you are looking at", "s0.h": "A map of every neuron in a brain",
   "s0.p": "In 2024 the FlyWire project published the complete wiring diagram of an adult fruit fly brain. One fly's brain was cut into about 7,000 slices, each around 40 nanometres thick, more than a thousand times thinner than a hair. An electron microscope photographed every slice, AI traced each neuron through the stack, and hundreds of scientists and volunteers checked the result by hand.",
   f1: "neurons, each shown above in its real position", f2: "slices, each photographed with an electron microscope", f3: "connections between neurons, all known",
   "s1.eb": "The run above, step by step", "s1.h": "How the memory gets written",
-  "s1.p": "The smell switches on Kenyon cells for 2 seconds. The dopamine neurons fire for 1 second. Dopamine switches on two receptors at different speeds, and each Kenyon cell keeps a short calcium memory of having just been active. The connection only changes where these overlap in the right order.",
+  "s1.p": "The smell switches on Kenyon cells for 2 seconds. The dopamine neurons fire for 1 second. Dopamine switches on two receptors at different speeds, and each Kenyon cell keeps a short calcium memory of having just been active. What changes is the acetylcholine connection from each Kenyon cell to the avoid neuron, and only where these signals overlap in the right order.",
   "s2.eb": "Handler et al. 2019, Cell", "s2.h": "Same dopamine, opposite memory",
   "s2.p": "The line reruns this page's model for every arrival time from 4 s before to 8 s after the smell. The dots come from the full simulated mushroom body, 5,608 neurons wired as in the real fly. Real flies show the same pattern: dopamine before the smell strengthens, during or just after weakens, and many seconds later does nothing.",
   "cl.page": "this page, your settings", "cl.ctrl": "same, without the drug", "cl.full": "full mushroom body simulation",
@@ -414,7 +458,7 @@ en: {
   "real.h": "Real data",
   real: ["The position of every one of the 139,248 neurons (FlyWire v783).", "The 2,556 connections from Kenyon cells to the avoid neuron, and which cells they come from.", "The shape of the brain and its regions (FlyWire; regions from Ito et al. 2014, mapped by the fafbseg project).", "Every number in the model, with its source in the table below."],
   "drawn.h": "Drawn to make it visible",
-  drawn: ["Neurons are drawn as small spheres. Real ones branch like trees.", "Wires follow smooth curves through the mushroom body, not their exact traced path.", "The smell is a random 10% of Kenyon cells.", "The memory spot γ5 is placed at the tip of the mushroom body's inner lobe, an estimate.", "Changes in brightness are exaggerated about three times so you can see them.", "The random twinkling across the brain is decoration, not simulated activity.", "The model runs one compartment of the mushroom body, not the whole brain."],
+  drawn: ["Neurons are drawn as small spheres. Real ones branch like trees.", "Wires follow smooth curves through the mushroom body, not their exact traced path.", "The smell is a random 10% of Kenyon cells.", "The memory spot γ5 is placed at the tip of the mushroom body's inner lobe, an estimate.", "Changes in brightness are exaggerated about three times so you can see them.", "The random twinkling across the brain is decoration, not simulated activity.", "The model runs one compartment of the mushroom body, not the whole brain.", "The T-maze turns the change in the connection into a choice with a simple rule; the model does not simulate walking."],
   "s6.eb": "For scientists", "s6.h": "Where every number comes from",
   "s6.p": "Measured: taken directly from a fly experiment. Calibrated: fitted so the model reproduces a named measurement. Assumed: no fly measurement exists yet.",
   "th.p": "Parameter", "th.v": "Value", "th.s": "Status", "th.src": "Source or target",
@@ -443,31 +487,49 @@ ru: {
   cue: "как это работает и откуда числа ↓",
   "drug.none": "Нет", "drug.d1null": "Убрать рецептор", "drug.flu": "Снять тормоз", "drug.coc": "Кокаин", "drug.fumin": "Нет насоса", "drug.iodo": "Меньше дофамина",
   "dn.none": "Обычная муха.",
-  "dn.d1null": "Муха без Dop1R1 — рецептора, который ослабляет связь. Посмотрите, что останется.",
-  "dn.flu": "Флупентиксол блокирует Dop2R — тормоз, которым дофаминовые нейроны сдерживают сами себя. Дофамина примерно вчетверо больше.",
-  "dn.coc": "Кокаин замедляет насос, который убирает дофамин, и он задерживается дольше.",
-  "dn.fumin": "У мутанта fumin насоса нет вовсе. Дофамин уходит только медленно, сам по себе.",
-  "dn.iodo": "3-иодтирозин мешает производить дофамин, и каждый импульс выпускает меньше.",
+  "dn.d1null": "Нет рецептора, который ослабляет связь, — учитель может её только усиливать. (мутант по Dop1R1)",
+  "dn.flu": "Снят тормоз дофаминовых нейронов — учитель кричит примерно вчетверо громче. (флупентиксол блокирует Dop2R)",
+  "dn.coc": "Дофамин не убирается — учитель говорит дольше. У людей именно поэтому кокаин вызывает зависимость: он подделывает сигнал «это важно». (кокаин блокирует насос дофамина)",
+  "dn.fumin": "Насоса дофамина нет вовсе — голос учителя долго не затихает. (мутант fumin)",
+  "dn.iodo": "Дофамина делается меньше — учитель шепчет. (3-иодтирозин)",
   "ch.2": "Клетки Кеньона", "ch.6": "Дофаминовые нейроны γ5", "ch.7": "Нейрон «избегай» (MBON-γ5)", "ch.3": "Другие дофаминовые нейроны",
   "ch.4": "Другие выходные нейроны", "ch.5": "Другой контур обучения (γ1pedc)", "ch.0": "Остальной мозг", "ch.1": "Зрительная система",
   "ch.w": "Настоящие связи", "ch.s": "Контур мозга и области",
   "tl.smell": "запах", "tl.da": "дофамин", "tl.level": "уровень дофамина", "tl.w": "связь",
   "tag.live": "точка памяти γ5", "tag.al": "Антеннальная доля: сюда приходят запахи", "tag.ca": "Чашечка: клетки Кеньона", "tag.ped": "Ножка", "tag.g5": "γ5: здесь пишется память",
   "tag.mbon": "Нейрон «избегай»", "tag.pam": "Дофаминовые нейроны", "tag.mb": "Грибовидное тело",
+  "m.label": "Ваша задача",
+  "m.avoid": "Научи избегать запах",
+  "m.like": "Научи идти на запах",
+  "m.ok": "Получилось! Попыток: {n}.",
+  "m.try.avoid": "Пока нет. Подсказка: дофамин — это учитель. А если он придёт раньше запаха?",
+  "m.try.like": "Пока нет. Подсказка: пусть учитель придёт сразу после начала запаха.",
+  "maze.cap": "После обучения к запаху идут {n} из 10 мух. До обучения — 5 из 10.",
+  "maze.smell": "запах",
+  "maze.air": "чистый воздух",
+  "maze.fine": "Схема: модель считает связь, а превращение её в выбор мухи — наша иллюстрация.",
+  "s7.eb": "Кто за что отвечает",
+  "s7.h": "Ацетилхолин хранит память. Дофамин учит.",
+  "r1.h": "Ацетилхолин — сообщение",
+  "r1.p": "Клетки Кеньона говорят с нейроном «избегай» ацетилхолином. Сила этой связи и есть память.",
+  "r2.h": "Дофамин — учитель",
+  "r2.p": "Дофамин ничего не хранит. Он приходит, когда случилось что-то важное, и велит связи измениться — усилиться или ослабнуть, в зависимости от времени.",
+  "r3.h": "А у людей?",
+  "r3.p": "Роли распределены похоже. Память хранится в основном в глутаматных синапсах. Ацетилхолин помогает вниманию и обучению — поэтому лекарства от Альцгеймера его берегут. А дофамин сообщает, что это стоило запомнить.",
   steps: [
     ["Это весь мозг плодовой мушки", "Он размером с маковое зёрнышко. Каждая светящаяся точка — настоящий нейрон на своём настоящем месте. Их 139 248, и все прослежены по снимкам электронного микроскопа из мозга одной мухи."],
     ["Приходит запах", "Запахи улавливают антенны, и сигнал сначала попадает в антеннальные доли — круглые области спереди. Оттуда он поднимается к структуре под названием грибовидное тело."],
     ["Грибовидное тело — центр обучения мухи", "Здесь живут около 5 000 нейронов — клеток Кеньона. Каждый запах включает свою небольшую группу, как штрихкод. Зелёные клетки мерцают: это и есть запах."],
-    ["Их провода сходятся на нейроне «избегай»", "Светящиеся нити — настоящие связи из карты: 2 556 клеток Кеньона тянут провода к одному выходному нейрону (синий). Когда он срабатывает, муха стремится уйти от запаха."],
-    ["Дофамин — сигнал учителя", "Когда происходит что-то важное, дофаминовые нейроны (розовые) срабатывают и заливают эту крошечную точку дофамином. Розовое облако — дофамин, ровно там, где сходятся провода."],
-    ["Память — это изменённая связь", "Дофамин ослабил провода от клеток, которые включил этот запах. Смотрите, как они тускнеют. Теперь запах тише «говорит» нейрону «избегай», и муха избегает его меньше."],
-    ["Главный поворот — время", "Придёт через полсекунды после запаха — связь ослабнет. Придёт за секунду до — тот же дофамин её усилит. Ваша очередь: подвигайте ползунок."],
+    ["Их провода сходятся на нейроне «избегай»", "Светящиеся нити — настоящие связи из карты: 2 556 клеток Кеньона тянут провода к одному выходному нейрону (синий). Говорят они с ним ацетилхолином, и когда он срабатывает, муха стремится уйти от запаха."],
+    ["Дофамин — учитель", "Сам дофамин память не хранит. Когда происходит что-то важное, дофаминовые нейроны (розовые) заливают эту точку дофамином и велят ацетилхолиновым связям ослабнуть или усилиться. Розовое облако — это дофамин."],
+    ["Память — это изменённая связь", "Учитель ослабил связи от клеток, которые включил этот запах. Смотрите, как они тускнеют. Теперь запах тише «говорит» нейрону «избегай», и муха избегает его меньше."],
+    ["Ваша очередь", "Всё решает время. Придёт учитель через полсекунды после запаха — связь ослабнет, за секунду до — усилится. Ваша задача: научить муху избегать запах. Маленький лабиринт покажет, что сделала бы муха."],
   ],
   "s0.eb": "Что вы видите", "s0.h": "Карта каждого нейрона мозга",
   "s0.p": "В 2024 году проект FlyWire опубликовал полную схему соединений мозга взрослой плодовой мушки. Мозг одной мухи разрезали примерно на 7 000 срезов толщиной около 40 нанометров — это в тысячу с лишним раз тоньше волоса. Электронный микроскоп сфотографировал каждый срез, ИИ проследил каждый нейрон сквозь всю стопку, а сотни учёных и добровольцев проверили результат вручную.",
   f1: "нейронов, каждый показан выше на своём настоящем месте", f2: "срезов, каждый сфотографирован электронным микроскопом", f3: "связей между нейронами, все известны",
   "s1.eb": "Прогон сверху, шаг за шагом", "s1.h": "Как записывается память",
-  "s1.p": "Запах включает клетки Кеньона на 2 секунды. Дофаминовые нейроны срабатывают на 1 секунду. Дофамин включает два рецептора с разной скоростью, а каждая клетка Кеньона хранит короткую кальциевую «память» о том, что только что была активна. Связь меняется только там, где всё это совпадает в правильном порядке.",
+  "s1.p": "Запах включает клетки Кеньона на 2 секунды. Дофаминовые нейроны срабатывают на 1 секунду. Дофамин включает два рецептора с разной скоростью, а каждая клетка Кеньона хранит короткую кальциевую «память» о том, что только что была активна. Меняется ацетилхолиновая связь от клетки Кеньона к нейрону «избегай» — и только там, где эти сигналы совпали в правильном порядке.",
   "s2.eb": "Handler et al. 2019, Cell", "s2.h": "Тот же дофамин — противоположная память",
   "s2.p": "Линия — модель этой страницы, пересчитанная для каждого момента прихода дофамина: от 4 с до запаха до 8 с после. Точки — полная симуляция грибовидного тела, 5 608 нейронов, соединённых как у настоящей мухи. У живых мух та же картина: дофамин до запаха усиливает, во время или сразу после — ослабляет, а через много секунд — ничего не делает.",
   "cl.page": "эта страница, ваши настройки", "cl.ctrl": "то же без препарата", "cl.full": "полная симуляция грибовидного тела",
@@ -483,7 +545,7 @@ ru: {
   "real.h": "Настоящие данные",
   real: ["Положение каждого из 139 248 нейронов (FlyWire v783).", "2 556 связей от клеток Кеньона к нейрону «избегай» и то, от каких именно клеток они идут.", "Форма мозга и его областей (FlyWire; области — Ito et al. 2014, перенесены проектом fafbseg).", "Каждое число модели — с источником в таблице ниже."],
   "drawn.h": "Нарисовано, чтобы было видно",
-  drawn: ["Нейроны нарисованы шариками. Настоящие ветвятся, как деревья.", "Провода идут по плавным кривым через грибовидное тело, а не точно по прослеженному пути.", "Запах — это случайные 10% клеток Кеньона.", "Точка памяти γ5 поставлена на кончик внутренней доли грибовидного тела — это оценка.", "Изменения яркости усилены примерно втрое, чтобы их было видно.", "Случайное мерцание по всему мозгу — украшение, а не симуляция.", "Модель считает один компартмент грибовидного тела, а не весь мозг."],
+  drawn: ["Нейроны нарисованы шариками. Настоящие ветвятся, как деревья.", "Провода идут по плавным кривым через грибовидное тело, а не точно по прослеженному пути.", "Запах — это случайные 10% клеток Кеньона.", "Точка памяти γ5 поставлена на кончик внутренней доли грибовидного тела — это оценка.", "Изменения яркости усилены примерно втрое, чтобы их было видно.", "Случайное мерцание по всему мозгу — украшение, а не симуляция.", "Модель считает один компартмент грибовидного тела, а не весь мозг.", "Т-лабиринт переводит изменение связи в выбор мухи по простому правилу; ходьбу модель не считает."],
   "s6.eb": "Для учёных", "s6.h": "Откуда каждое число",
   "s6.p": "Measured — взято прямо из опыта на мухах. Calibrated — подогнано, чтобы модель воспроизводила названное измерение. Assumed — измерений на мухах пока нет.",
   "th.p": "Параметр", "th.v": "Значение", "th.s": "Статус", "th.src": "Источник или цель",
@@ -577,7 +639,7 @@ const CONNECTOME = [[-1.2, 14.6], [-0.5, -9.7], [0, -16.9], [0.5, -14.7], [6, 3.
 
 /* ================================================================ state */
 const DEF = { onset: 0.5, daRate: 20 };
-const state = { onset: DEF.onset, daRate: DEF.daRate, drug: DRUGS[0], run: null, playing: !reduceMotion, speed: 1, t: -1.5, curve: null, control: null };
+const state = { mission: "avoid", tries: 0, onset: DEF.onset, daRate: DEF.daRate, drug: DRUGS[0], run: null, playing: !reduceMotion, speed: 1, t: -1.5, curve: null, control: null };
 const VIEW0 = -5, VIEW1 = 10;
 const sign = (v, eps = 0) => (v > eps ? "+" : v < -eps ? "−" : "");
 const fmtPct = (v) => sign(v, 0.0005) + Math.abs(v * 100).toFixed(1) + "%";
@@ -595,14 +657,73 @@ function at(t) {
     odour: t >= 0 && t < P.odDur, daOn: t >= state.onset && t < state.onset + P.daDur };
 }
 
+/* the T-maze: what the change would mean for the fly's choice (schematic).
+   MBON-gamma5 drives avoidance, so a weaker input from this smell means less
+   avoidance of it. The rule below is an illustration, not part of the model. */
+const choiceProb = (dw) => Math.min(0.95, Math.max(0.05, 0.5 - 1.5 * dw));
+const maze = { flies: [], t0: 0, nSmell: -1 };
+function resetMaze(nSmell) {
+  const rng = mulberry32(31 + nSmell);
+  const picks = Array.from({ length: 10 }, (_, i) => i < nSmell);
+  for (let i = picks.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [picks[i], picks[j]] = [picks[j], picks[i]]; }
+  maze.flies = picks.map((smell, i) => ({ smell, delay: i * 0.45, speed: 0.85 + rng() * 0.3, jit: rng() }));
+  maze.nSmell = nSmell; maze.t0 = performance.now();
+}
+function drawFly(ctx, x, y, ang) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+  ctx.fillStyle = "rgba(200,215,235,.35)";
+  ctx.beginPath(); ctx.ellipse(-1.5, -3.2, 3.6, 1.9, 0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-1.5, 3.2, 3.6, 1.9, -0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#d9dee6"; ctx.beginPath(); ctx.ellipse(0, 0, 4.4, 1.9, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#e0463a"; ctx.beginPath(); ctx.arc(4.6, 0, 1.7, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+function drawMaze(now) {
+  const cv = $("maze"); if (!cv || !maze.flies.length) return;
+  const { ctx, w, h } = fit(cv);
+  ctx.clearRect(0, 0, w, h);
+  const cx = w / 2, top = 40, arm = 24, bot = h - 8, L0 = 14, R0 = w - 14;
+  ctx.fillStyle = "#11151c"; ctx.strokeStyle = "#2a3240"; ctx.lineWidth = 1;
+  ctx.fillRect(L0, top - arm / 2, R0 - L0, arm); ctx.fillRect(cx - arm / 2, top, arm, bot - top);
+  const g = ctx.createLinearGradient(L0, 0, cx, 0);
+  g.addColorStop(0, "rgba(87,224,138,.5)"); g.addColorStop(1, "rgba(87,224,138,0)");
+  ctx.fillStyle = g; ctx.fillRect(L0, top - arm / 2, cx - L0, arm);
+  ctx.font = `11px ${MONO}`; ctx.fillStyle = C.kc; ctx.textAlign = "left"; ctx.fillText(T("maze.smell"), L0, top - arm / 2 - 7);
+  ctx.fillStyle = C.muted; ctx.textAlign = "right"; ctx.fillText(T("maze.air"), R0, top - arm / 2 - 7);
+  ctx.font = `600 16px ${MONO}`;
+  ctx.fillStyle = C.kc; ctx.textAlign = "left"; ctx.fillText(String(maze.nSmell), L0 + 4, top + arm / 2 + 20);
+  ctx.fillStyle = C.muted; ctx.textAlign = "right"; ctx.fillText(String(10 - maze.nSmell), R0 - 4, top + arm / 2 + 20);
+  const cycle = 10 * 0.45 + 6.5, tt = reduceMotion ? 99 : ((now - maze.t0) / 1000) % cycle;
+  const stem = bot - top, v = 65;
+  maze.flies.forEach((f) => {
+    const d = Math.max(0, tt - f.delay) * f.speed * v;
+    if (tt < f.delay) return;
+    const reach = cx - L0 - 12 - f.jit * 60;
+    if (d < stem) drawFly(ctx, cx + (f.jit - 0.5) * 8, bot - d, -Math.PI / 2);
+    else { const e = Math.min(d - stem, reach); drawFly(ctx, cx + (f.smell ? -e : e), top + (f.jit - 0.5) * 10, f.smell ? Math.PI : 0); }
+  });
+}
+function buildMissions() {
+  $("missions").replaceChildren(...["avoid", "like"].map((m) => {
+    const b = document.createElement("button");
+    b.className = "chip"; b.type = "button"; b.textContent = T("m." + m);
+    b.setAttribute("aria-pressed", String(state.mission === m));
+    b.addEventListener("click", () => { state.mission = m; state.tries = 0; buildMissions(); renderReadouts(); });
+    return b;
+  }));
+}
 function renderReadouts() {
   const r = state.run; if (!r) return;
   $("r-dw").textContent = fmtPct(r.dw);
   $("r-dw").style.color = r.dw > 0.02 ? "var(--focus)" : r.dw < -0.02 ? "var(--mbon)" : "var(--text)";
   $("r-peak").textContent = num(r.peak, 2) + " µM";
   $("r-brake").textContent = Math.round((1 - r.minGain) * 100) + "%";
-  const kind = r.dw < -0.02 ? "ltd" : r.dw > 0.02 ? "ltp" : "none";
-  $("verdict").className = "pill " + kind; $("verdict").textContent = T("vd." + kind); $("verdict-txt").textContent = T("vt." + kind);
+  const n = Math.round(choiceProb(r.dw) * 10);
+  if (n !== maze.nSmell || !maze.flies.length) resetMaze(n);
+  $("maze-cap").textContent = T("maze.cap").replace("{n}", n);
+  const ok = state.mission === "avoid" ? n <= 3 : n >= 7;
+  $("m-status").className = "status" + (ok ? " ok" : "");
+  $("m-status").textContent = ok ? T("m.ok").replace("{n}", Math.max(1, state.tries)) : T("m.try." + state.mission);
   $("o-onset").textContent = describeOnset(state.onset);
   $("o-darate").textContent = `${state.daRate} ${T("hz")}`;
 }
@@ -634,11 +755,12 @@ function buildDrugChips() {
   $("drug-note").textContent = T("dn." + state.drug.id);
 }
 function selectDrug(d) {
-  state.drug = d; buildDrugChips(); recompute(); recomputeCurve(); state.t = restartAt(); setPlaying(true);
+  state.drug = d; state.tries++; buildDrugChips(); recompute(); recomputeCurve(); state.t = restartAt(); setPlaying(true);
 }
 $("onset").addEventListener("input", (e) => { state.onset = +e.target.value; recompute(); state.t = restartAt(); drawCurve(); });
-$("onset").addEventListener("change", () => setPlaying(true));
+$("onset").addEventListener("change", () => { state.tries++; renderReadouts(); setPlaying(true); });
 $("darate").addEventListener("input", (e) => { state.daRate = +e.target.value; recompute(); recomputeCurve(); });
+$("darate").addEventListener("change", () => { state.tries++; renderReadouts(); });
 $("play").addEventListener("click", () => setPlaying(!state.playing));
 $("replay").addEventListener("click", () => { state.t = restartAt(); setPlaying(true); });
 $("speeds").querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => {
@@ -1309,7 +1431,7 @@ const tour = {
   },
   next() { if (STEPS[this.i].last) this.end(); else this.go(this.i + 1); },
   end() {
-    this.on = false; $("stage").classList.remove("touring"); state.speed = 1; state.t = restartAt(); setPlaying(true);
+    this.on = false; $("stage").classList.remove("touring"); state.speed = 1; state.mission = "avoid"; state.tries = 0; buildMissions(); renderReadouts(); state.t = restartAt(); setPlaying(true);
     if (G.ok) { G.setStepTags([]); if (G.controls) G.controls.autoRotate = false; }
   },
   userMoved() { if (this.on) this.paused = true; if (G.controls) G.controls.autoRotate = false; },
@@ -1334,7 +1456,7 @@ function applyLang() {
   $("langbtn").textContent = lang === "ru" ? "EN" : "RU";
   $("qualbtn").textContent = T(quality === "eco" ? "q.eco" : "q.high");
   listInto("real-list", T("real")); listInto("drawn-list", T("drawn"));
-  buildDrugChips(); renderReadouts(); setPlaying(state.playing);
+  buildDrugChips(); buildMissions(); renderReadouts(); setPlaying(state.playing);
   if (G.ok) G.buildChannels();
   if (tour.on) { const words = T("steps")[tour.i]; $("tour-title").textContent = words[0]; $("tour-body").textContent = words[1];
     $("tour-next").textContent = T(STEPS[tour.i].last ? "tour.try" : "tour.next"); if (G.ok) G.setStepTags(STEPS[tour.i].tags); }
@@ -1370,7 +1492,7 @@ function loop(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   if (state.playing && state.run) { state.t += dt * state.speed; if (state.t > VIEW1) state.t = tour.on ? STEPS[tour.i].t : restartAt(); }
   tour.tick(now);
-  if (stageVisible) { drawTimeline(); if (G.ok) G.frame(now); }
+  if (stageVisible) { drawTimeline(); if (!tour.on) drawMaze(now); if (G.ok) G.frame(now); }
   if (belowVisible) { drawTraces(); drawCut(); }
 }
 recompute(); recomputeCurve(); initBrain(); applyLang(); tour.start();
