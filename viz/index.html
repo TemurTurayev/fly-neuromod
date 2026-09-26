@@ -1,0 +1,1381 @@
+<meta charset="utf-8">
+<title>When Dopamine Arrives</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  color-scheme:dark;
+  --ground:#05070b; --panel:#0c0f14; --panel-2:#12161d; --line:#1b212b; --line-2:#28303d;
+  --glass:rgba(8,10,14,.8);
+  --text:#e2e6ec; --muted:#8c95a4; --faint:#586274;
+  --kc:#57e08a; --da:#ff4fb0; --mbon:#5ab4ff; --focus:#ffb84d; --ip3:#b58cff; --g1:#c8a6ff;
+  --display:"Unbounded","Avenir Next","Segoe UI",sans-serif;
+  --body:"Onest","Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--text);font:15px/1.6 var(--body);margin:0}
+a{color:var(--focus)}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h2{font-size:clamp(24px,3vw,32px);font-weight:700;line-height:1.12}
+.eyebrow{font:500 11px/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+p{margin:0;max-width:64ch}
+.muted{color:var(--muted)}
+.glass{background:var(--glass);border:1px solid var(--line);border-radius:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+
+/* ---------- stage ---------- */
+.stage{position:relative;height:clamp(680px,95vh,1080px);border-bottom:1px solid var(--line);overflow:hidden;background:#05070b}
+.viewport{position:absolute;inset:0}
+#brain{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+#brain:active{cursor:grabbing}
+.vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 62% 45%,transparent 45%,rgba(3,4,7,.55) 100%)}
+.left{position:absolute;left:20px;top:20px;bottom:20px;width:360px;display:flex;flex-direction:column;gap:12px;pointer-events:none}
+.left > *{pointer-events:auto}
+.title{display:grid;gap:6px}
+.title h1{font-size:clamp(24px,2.5vw,34px);font-weight:700;line-height:1.05}
+.title p{font-size:14px;color:#bcc3ce;max-width:40ch;line-height:1.5}
+.stage.touring .panel{display:none}
+.stage:not(.touring) .tourcard{display:none}
+
+.tourcard{padding:18px 18px 14px;display:grid;gap:10px}
+.tourcard .step{font:500 11px var(--mono);letter-spacing:.12em;color:var(--focus)}
+.tourcard h2{font-size:19px;line-height:1.25}
+.tourcard p{font-size:15px;line-height:1.55;color:#cfd5de}
+.bar{height:3px;background:var(--line-2);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--focus)}
+.tour-nav{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tour-nav .skip{margin-left:auto;background:none;border:0;color:var(--muted);font:12px var(--mono);cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:6px 2px}
+
+.panel{padding:14px 16px;display:grid;gap:13px;overflow:auto;min-height:0}
+.readouts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ro{display:grid;gap:1px}
+.ro b{font:600 20px/1.1 var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ro span{font:10.5px/1.3 var(--mono);color:var(--muted)}
+.verdict{display:grid;gap:4px}
+.pill{justify-self:start;font:600 11px/1 var(--mono);padding:6px 9px;border-radius:999px;letter-spacing:.06em}
+.pill.ltd{background:rgba(90,180,255,.14);color:var(--mbon);border:1px solid rgba(90,180,255,.4)}
+.pill.ltp{background:rgba(255,184,77,.14);color:var(--focus);border:1px solid rgba(255,184,77,.4)}
+.pill.none{background:var(--panel-2);color:var(--muted);border:1px solid var(--line-2)}
+.vtxt{font-size:13.5px;color:#cfd5de}
+.ctl{display:grid;gap:4px}
+.ctl-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.ctl label,.ctl .lbl{font:600 13.5px/1.3 var(--body)}
+.ctl output{font:500 12px var(--mono);color:var(--focus);font-variant-numeric:tabular-nums}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:26px;background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:4px;background:var(--line-2);border-radius:2px}
+input[type=range]::-moz-range-track{height:4px;background:var(--line-2);border-radius:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--da);margin-top:-7px;box-shadow:0 0 0 4px rgba(255,79,176,.18)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radius:50%;background:var(--da)}
+#onset::-webkit-slider-thumb{background:var(--focus);box-shadow:0 0 0 4px rgba(255,184,77,.2)}
+#onset::-moz-range-thumb{background:var(--focus)}
+.ticks{display:flex;justify-content:space-between;font:10px var(--mono);color:var(--faint)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{font:500 11.5px/1 var(--mono);padding:7px 9px;border-radius:999px;border:1px solid var(--line-2);background:transparent;color:var(--text);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--text);color:var(--ground);border-color:var(--text)}
+.note{font-size:12.5px;color:var(--muted);line-height:1.45}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.btn{font:500 12px/1 var(--mono);color:var(--text);background:var(--panel-2);border:1px solid var(--line-2);border-radius:6px;padding:9px 11px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn[aria-pressed="true"]{border-color:var(--focus);color:var(--focus)}
+.btn.primary{background:var(--focus);color:#1a1206;border-color:var(--focus);font-weight:600}
+.btn:focus-visible,.chip:focus-visible,input:focus-visible,summary:focus-visible,.skip:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+.views{position:absolute;top:20px;right:20px;display:grid;gap:8px;justify-items:end;max-width:calc(100% - 40px)}
+.views .row{justify-content:flex-end}
+details.layers{padding:8px 12px;min-width:240px}
+details.layers summary{cursor:pointer;font:500 12px var(--mono);color:var(--muted);list-style:none}
+details.layers summary::-webkit-details-marker{display:none}
+details.layers summary::after{content:" +";color:var(--faint)}
+details.layers[open] summary::after{content:" −"}
+.chs{display:grid;gap:5px;margin-top:8px}
+.ch{position:relative;display:grid;grid-template-columns:12px 1fr auto;align-items:center;gap:9px;font:11.5px/1.3 var(--mono);cursor:pointer;user-select:none}
+.ch input{position:absolute;opacity:0;pointer-events:none}
+.sw{width:9px;height:9px;border-radius:50%;background:currentColor;box-shadow:0 0 7px currentColor}
+.ch input:not(:checked) ~ .sw{background:transparent;box-shadow:none;outline:1px solid currentColor}
+.nm{color:var(--text)}
+.ch input:not(:checked) ~ .nm{color:var(--faint)}
+.ch input:focus-visible ~ .nm{outline:1px dashed var(--focus);outline-offset:2px}
+.ct{color:var(--muted)}
+
+.legend3d{position:absolute;right:20px;bottom:166px;padding:10px 12px;display:grid;gap:5px;font:11px/1.4 var(--mono);color:var(--muted);max-width:300px}
+.legend3d div{display:grid;grid-template-columns:12px 1fr;gap:8px;align-items:start}
+.legend3d i{width:9px;height:9px;border-radius:50%;margin-top:2px;box-shadow:0 0 6px currentColor;background:currentColor}
+.legend3d .hint{display:block;color:var(--faint);border-top:1px solid var(--line);padding-top:6px;margin-top:2px}
+.tag3d{position:absolute;left:0;top:0;pointer-events:none;font:500 11.5px/1.35 var(--mono);color:var(--text);background:rgba(8,10,14,.74);border:1px solid rgba(255,255,255,.18);border-radius:5px;padding:5px 8px;white-space:nowrap;transition:opacity .4s}
+.tag3d::before{content:"";position:absolute;left:-14px;top:50%;width:12px;height:1px;background:rgba(255,255,255,.5)}
+.tag3d b{font-weight:500}
+.tag3d.live{border-color:rgba(255,79,176,.55)}
+.tag3d.live b{color:var(--da)}
+
+.timeline{position:absolute;left:400px;right:20px;bottom:20px;height:130px;padding:6px 8px 4px}
+#tl{width:100%;height:100%;display:block;cursor:ew-resize;touch-action:none}
+.scroll-cue{position:absolute;left:50%;bottom:3px;transform:translateX(-50%);font:10px var(--mono);color:var(--faint);letter-spacing:.1em;pointer-events:none}
+
+/* ---------- below ---------- */
+section{padding-block:52px;border-bottom:1px solid var(--line)}
+.sec-head{display:grid;gap:10px;margin-bottom:22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.story{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.fact{padding:18px;display:grid;gap:6px;align-content:start}
+.fact b{font:700 clamp(26px,3vw,34px)/1 var(--display)}
+.fact span{font-size:14px;color:#c3c9d3}
+.traces{padding:10px 8px 6px}
+#traces{width:100%;display:block;height:380px}
+.pair{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;align-items:start}
+.curve-wrap{padding:14px 10px 4px;overflow-x:auto}
+#curve{width:100%;min-width:540px;height:auto;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:16px;padding:4px 14px 12px;font:12px var(--mono);color:var(--muted)}
+.legend i{display:inline-block;width:18px;height:2px;vertical-align:middle;margin-right:8px}
+.cut{position:relative}
+#cut{width:100%;display:block;aspect-ratio:600/380;height:auto}
+.detectors{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.det{padding:18px;display:grid;gap:12px;align-content:start}
+.det h3{font-size:17px;font-weight:700;line-height:1.2}
+.det svg{width:100%;height:auto;display:block}
+.det p{font-size:14px;color:#c3c9d3}
+.det .src{font:11px/1.4 var(--mono);color:var(--faint)}
+.honest{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.honest ul{margin:0;padding:18px 18px 18px 36px;display:grid;gap:8px;font-size:14px;color:#c3c9d3}
+.honest h3{font-size:16px;padding:18px 18px 0}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+td.v{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{font:600 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:4px 7px;border-radius:3px;white-space:nowrap}
+.tag.measured{color:var(--kc);background:rgba(87,224,138,.1);border:1px solid rgba(87,224,138,.35)}
+.tag.calibrated{color:var(--focus);background:rgba(255,184,77,.1);border:1px solid rgba(255,184,77,.35)}
+.tag.assumed{color:var(--muted);background:var(--panel-2);border:1px solid var(--line-2)}
+footer{padding-block:40px 60px;display:grid;gap:10px;font-size:14px;color:var(--muted)}
+
+@media (max-width:1000px){ .pair,.detectors,.story,.honest{grid-template-columns:1fr} }
+@media (max-width:900px){
+  .stage{height:auto;display:flex;flex-direction:column;gap:12px;padding:16px;overflow:visible}
+  .left{display:contents}
+  .title{order:1}
+  .viewport{order:2;position:relative;inset:auto;height:60vh;min-height:360px;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+  .tourcard{order:3}
+  .timeline{order:4;position:relative;left:auto;right:auto;bottom:auto;height:118px}
+  .panel{order:5;overflow:visible}
+  .views{top:10px;right:10px}
+  .legend3d,.scroll-cue{display:none}
+}
+</style>
+
+<header class="stage touring" id="stage">
+  <div class="viewport" id="viewport">
+    <canvas id="brain"></canvas>
+    <div class="vignette"></div>
+    <div id="tags"></div>
+    <div class="views">
+      <div class="row" role="group" id="viewbtns">
+        <button class="btn" type="button" data-view="brain" data-t="v.brain" aria-pressed="true"></button>
+        <button class="btn" type="button" data-view="mb" data-t="v.mb" aria-pressed="false"></button>
+        <button class="btn" type="button" data-view="g5" data-t="v.g5" aria-pressed="false"></button>
+      </div>
+      <div class="row">
+        <button class="btn" type="button" id="tourbtn" data-t="tour.again"></button>
+        <button class="btn" type="button" id="qualbtn"></button>
+        <button class="btn" type="button" id="langbtn" aria-label="Language"></button>
+      </div>
+      <details class="layers glass">
+        <summary data-t="layers"></summary>
+        <div class="chs" id="chs"></div>
+      </details>
+    </div>
+    <div class="legend3d glass" aria-hidden="true">
+      <div style="color:var(--kc)"><i></i><span data-t="lg.kc"></span></div>
+      <div style="color:var(--da)"><i></i><span data-t="lg.da"></span></div>
+      <div style="color:var(--mbon)"><i></i><span data-t="lg.mbon"></span></div>
+      <div style="color:#9fb3d9"><i></i><span data-t="lg.shell"></span></div>
+      <span class="hint" data-t="lg.hint"></span>
+    </div>
+  </div>
+
+  <div class="left">
+    <div class="title">
+      <div class="eyebrow" data-t="eyebrow"></div>
+      <h1 data-t="h1"></h1>
+      <p data-t="lede"></p>
+    </div>
+
+    <div class="tourcard glass" aria-live="polite">
+      <div class="step" id="tour-step"></div>
+      <h2 id="tour-title"></h2>
+      <p id="tour-body"></p>
+      <div class="bar"><i id="tour-bar"></i></div>
+      <div class="tour-nav">
+        <button class="btn" type="button" id="tour-back" data-t="tour.back"></button>
+        <button class="btn primary" type="button" id="tour-next"></button>
+        <button class="skip" type="button" id="tour-skip" data-t="tour.skip"></button>
+      </div>
+    </div>
+
+    <div class="panel glass">
+      <div class="readouts">
+        <div class="ro"><b id="r-dw">–</b><span data-t="ro.dw"></span></div>
+        <div class="ro"><b id="r-peak">–</b><span data-t="ro.peak"></span></div>
+        <div class="ro"><b id="r-brake">–</b><span data-t="ro.brake"></span></div>
+      </div>
+      <div class="verdict"><span class="pill none" id="verdict"></span><span class="vtxt" id="verdict-txt"></span></div>
+      <div class="ctl">
+        <div class="ctl-top"><label for="onset" data-t="c.onset"></label><output id="o-onset" for="onset"></output></div>
+        <input type="range" id="onset" min="-4" max="8" step="0.1" value="0.5">
+        <div class="ticks"><span data-t="c.before"></span><span data-t="c.smell"></span><span data-t="c.after"></span></div>
+      </div>
+      <div class="ctl">
+        <div class="ctl-top"><label for="darate" data-t="c.rate"></label><output id="o-darate" for="darate"></output></div>
+        <input type="range" id="darate" min="5" max="60" step="1" value="20">
+      </div>
+      <div class="ctl">
+        <span class="lbl" id="drugs-lbl" data-t="c.drug"></span>
+        <div class="chips" id="drugs" role="group" aria-labelledby="drugs-lbl"></div>
+        <div class="note" id="drug-note"></div>
+      </div>
+      <div class="row">
+        <button class="btn primary" id="play" type="button"></button>
+        <button class="btn" id="replay" type="button" data-t="c.replay"></button>
+        <span class="row" role="group" id="speeds">
+          <button class="chip" type="button" data-speed="0.5" aria-pressed="false">0.5×</button>
+          <button class="chip" type="button" data-speed="1" aria-pressed="true">1×</button>
+          <button class="chip" type="button" data-speed="2" aria-pressed="false">2×</button>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="timeline glass"><canvas id="tl"></canvas></div>
+  <div class="scroll-cue" data-t="cue"></div>
+</header>
+
+<main>
+<section><div class="wrap">
+  <div class="sec-head"><div class="eyebrow" data-t="s0.eb"></div><h2 data-t="s0.h"></h2><p class="muted" data-t="s0.p"></p></div>
+  <div class="story">
+    <div class="card fact"><b>139,248</b><span data-t="f1"></span></div>
+    <div class="card fact"><b>~7,000</b><span data-t="f2"></span></div>
+    <div class="card fact"><b>15,091,983</b><span data-t="f3"></span></div>
+  </div>
+</div></section>
+
+<section id="traces-sec"><div class="wrap">
+  <div class="sec-head"><div class="eyebrow" data-t="s1.eb"></div><h2 data-t="s1.h"></h2><p class="muted" data-t="s1.p"></p></div>
+  <div class="card traces"><canvas id="traces"></canvas></div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="pair">
+    <div>
+      <div class="sec-head"><div class="eyebrow" data-t="s2.eb"></div><h2 data-t="s2.h"></h2><p class="muted" data-t="s2.p"></p></div>
+      <div class="card">
+        <div class="curve-wrap"><svg id="curve" viewBox="0 0 760 330" role="img"></svg></div>
+        <div class="legend">
+          <span><i style="background:var(--focus)"></i><span data-t="cl.page"></span></span>
+          <span id="lg-control" hidden><i style="background:var(--muted)"></i><span data-t="cl.ctrl"></span></span>
+          <span><i style="background:var(--text);height:8px;width:8px;border-radius:50%"></i><span data-t="cl.full"></span></span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="sec-head"><div class="eyebrow" data-t="s3.eb"></div><h2 data-t="s3.h"></h2><p class="muted" data-t="s3.p"></p></div>
+      <div class="card cut"><canvas id="cut"></canvas></div>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head"><div class="eyebrow" data-t="s4.eb"></div><h2 data-t="s4.h"></h2><p class="muted" data-t="s4.p"></p></div>
+  <div class="detectors">
+    <div class="card det">
+      <svg viewBox="0 0 300 90" aria-hidden="true">
+        <rect x="20" y="22" width="120" height="16" rx="3" fill="#57e08a" opacity=".85"/>
+        <rect x="110" y="52" width="150" height="16" rx="3" fill="#ff4fb0" opacity=".85"/>
+        <path d="M276 30 L276 62" stroke="#5ab4ff" stroke-width="2"/><path d="M270 56 L276 66 L282 56" fill="none" stroke="#5ab4ff" stroke-width="2"/>
+      </svg>
+      <h3 data-t="d1.h"></h3><p data-t="d1.p"></p><div class="src">Yovell &amp; Abrams 1992, PNAS 89:6526</div>
+    </div>
+    <div class="card det">
+      <svg viewBox="0 0 300 90" aria-hidden="true">
+        <rect x="20" y="22" width="120" height="16" rx="3" fill="#b58cff" opacity=".85"/>
+        <rect x="110" y="52" width="150" height="16" rx="3" fill="#57e08a" opacity=".85"/>
+        <path d="M276 62 L276 30" stroke="#ffb84d" stroke-width="2"/><path d="M270 36 L276 26 L282 36" fill="none" stroke="#ffb84d" stroke-width="2"/>
+      </svg>
+      <h3 data-t="d2.h"></h3><p data-t="d2.p"></p><div class="src">Bezprozvanny et al. 1991, Nature 351:751</div>
+    </div>
+    <div class="card det">
+      <svg viewBox="0 0 300 90" aria-hidden="true">
+        <circle cx="70" cy="45" r="26" fill="none" stroke="#ff4fb0" stroke-width="2"/>
+        <path d="M100 32 C150 10 200 10 238 34" fill="none" stroke="#8a93a3" stroke-width="1.5" stroke-dasharray="4 4"/>
+        <path d="M238 58 C200 82 150 82 100 58" fill="none" stroke="#ff4fb0" stroke-width="2"/><path d="M108 52 L98 58 L108 66" fill="none" stroke="#ff4fb0" stroke-width="2"/>
+      </svg>
+      <h3 data-t="d3.h"></h3><p data-t="d3.p"></p><div class="src">Shin &amp; Venton 2022, Angew Chem 61:e202207399</div>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head"><div class="eyebrow" data-t="s5.eb"></div><h2 data-t="s5.h"></h2></div>
+  <div class="honest">
+    <div class="card"><h3 data-t="real.h"></h3><ul id="real-list"></ul></div>
+    <div class="card"><h3 data-t="drawn.h"></h3><ul id="drawn-list"></ul></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head"><div class="eyebrow" data-t="s6.eb"></div><h2 data-t="s6.h"></h2><p class="muted" data-t="s6.p"></p></div>
+  <div class="card table-wrap"><table>
+    <thead><tr><th data-t="th.p"></th><th data-t="th.v"></th><th data-t="th.s"></th><th data-t="th.src"></th></tr></thead>
+    <tbody id="prov"></tbody>
+  </table></div>
+</div></section>
+</main>
+
+<footer class="wrap">
+  <div><span data-t="foot1"></span> <a href="https://github.com/TemurTurayev/fly-neuromod" target="_blank" rel="noopener">github.com/TemurTurayev/fly-neuromod</a></div>
+  <div data-t="foot2"></div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="brain.js"></script>
+<script>
+(() => {
+"use strict";
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (id) => document.getElementById(id);
+
+/* ================================================================ words */
+const L = {
+en: {
+  eyebrow: "A real fly brain · 139,248 neurons", h1: "When dopamine arrives",
+  lede: "How does a brain learn? Fly inside a real fruit fly brain and watch a memory being written, one connection at a time.",
+  "q.eco": "Quality: eco", "q.high": "Quality: high", "v.brain": "Whole brain", "v.mb": "Learning centre", "v.g5": "Memory spot", "tour.again": "Guided tour", layers: "Layers",
+  "lg.kc": "Kenyon cells: they recognise smells. The ones this smell switches on flicker.",
+  "lg.da": "Dopamine neurons, the teaching signal. The pink cloud is dopamine itself.",
+  "lg.mbon": "Output neuron that tells the fly to avoid. The glowing threads are its real inputs.",
+  "lg.shell": "Outline of the brain and its regions.",
+  "lg.hint": "drag to rotate · scroll or pinch to zoom · right-drag to move",
+  "tour.back": "Back", "tour.next": "Next", "tour.try": "Try it yourself", "tour.skip": "Skip to the controls",
+  "ro.dw": "memory change", "ro.peak": "peak dopamine", "ro.brake": "self-braking",
+  "vd.ltd": "WEAKER", "vd.ltp": "STRONGER", "vd.none": "NO MEMORY",
+  "vt.ltd": "The fly would now avoid this smell less.", "vt.ltp": "The fly would now avoid this smell more.", "vt.none": "The connection ends where it started.",
+  "c.onset": "When does dopamine arrive?", "c.before": "before the smell", "c.smell": "smell", "c.after": "after",
+  "c.rate": "How strong is the dopamine burst?", "c.drug": "Try a drug or a mutant fly", "c.replay": "Replay",
+  "c.play": "Play", "c.pause": "Pause", hz: "spikes per second",
+  "on.before": "s before the smell", "on.after": "s after the smell starts", "on.with": "together with the smell",
+  cue: "how it works, and where the numbers come from ↓",
+  "drug.none": "None", "drug.d1null": "Block the receptor", "drug.flu": "Remove the brake", "drug.coc": "Cocaine", "drug.fumin": "No dopamine pump", "drug.iodo": "Less dopamine",
+  "dn.none": "A normal fly.",
+  "dn.d1null": "A fly without Dop1R1, the receptor that makes the connection weaker. Watch what is left.",
+  "dn.flu": "Flupentixol blocks Dop2R, the brake dopamine neurons put on themselves. About four times more dopamine.",
+  "dn.coc": "Cocaine slows the pump that clears dopamine away, so it lingers longer.",
+  "dn.fumin": "The fumin mutant has no dopamine pump at all. Dopamine drifts away only slowly.",
+  "dn.iodo": "3-iodotyrosine blocks dopamine production, so each spike releases less.",
+  "ch.2": "Kenyon cells", "ch.6": "Dopamine neurons of γ5", "ch.7": "Avoid neuron (MBON-γ5)", "ch.3": "Other dopamine neurons",
+  "ch.4": "Other output neurons", "ch.5": "Another learning circuit (γ1pedc)", "ch.0": "Rest of the brain", "ch.1": "Visual system",
+  "ch.w": "Real connections", "ch.s": "Brain outline and regions",
+  "tl.smell": "smell", "tl.da": "dopamine", "tl.level": "dopamine level", "tl.w": "connection",
+  "tag.live": "memory spot γ5", "tag.al": "Antennal lobe: smells arrive here", "tag.ca": "Calyx: Kenyon cells", "tag.ped": "Stalk", "tag.g5": "γ5: where the memory is written",
+  "tag.mbon": "Avoid neuron", "tag.pam": "Dopamine neurons", "tag.mb": "Mushroom body",
+  steps: [
+    ["This is the whole brain of a fruit fly", "It is about the size of a poppy seed. Every glowing point is one real neuron in its real place, 139,248 of them, all traced from electron-microscope images of a single fly's brain."],
+    ["A smell arrives", "Smells are picked up by the antennae and land first in the antennal lobes, the round regions at the front. From there the signal travels up to a structure called the mushroom body."],
+    ["The mushroom body is the fly's learning centre", "About 5,000 neurons called Kenyon cells live here. Each smell switches on a different small group of them, like a barcode. Watch the green cells flicker: that is the smell."],
+    ["Their wires meet an \"avoid\" neuron", "These glowing threads are real connections from the map: 2,556 Kenyon cells send wires to one output neuron (blue). When that neuron fires, the fly tends to move away from the smell."],
+    ["Dopamine: the teaching signal", "When something important happens, dopamine neurons (pink) fire and flood this tiny spot with dopamine. The pink cloud is the dopamine, in the spot where the wires meet."],
+    ["A memory is a changed connection", "Dopamine has weakened the wires from the cells this smell switched on. Watch them dim. Now this smell speaks more quietly to the avoid neuron, so the fly avoids it less."],
+    ["The twist: timing", "Arrive half a second after the smell and dopamine weakens the connection. Arrive a second before and the same dopamine strengthens it. Your turn: move the slider and see."],
+  ],
+  "s0.eb": "What you are looking at", "s0.h": "A map of every neuron in a brain",
+  "s0.p": "In 2024 the FlyWire project published the complete wiring diagram of an adult fruit fly brain. One fly's brain was cut into about 7,000 slices, each around 40 nanometres thick, more than a thousand times thinner than a hair. An electron microscope photographed every slice, AI traced each neuron through the stack, and hundreds of scientists and volunteers checked the result by hand.",
+  f1: "neurons, each shown above in its real position", f2: "slices, each photographed with an electron microscope", f3: "connections between neurons, all known",
+  "s1.eb": "The run above, step by step", "s1.h": "How the memory gets written",
+  "s1.p": "The smell switches on Kenyon cells for 2 seconds. The dopamine neurons fire for 1 second. Dopamine switches on two receptors at different speeds, and each Kenyon cell keeps a short calcium memory of having just been active. The connection only changes where these overlap in the right order.",
+  "s2.eb": "Handler et al. 2019, Cell", "s2.h": "Same dopamine, opposite memory",
+  "s2.p": "The line reruns this page's model for every arrival time from 4 s before to 8 s after the smell. The dots come from the full simulated mushroom body, 5,608 neurons wired as in the real fly. Real flies show the same pattern: dopamine before the smell strengthens, during or just after weakens, and many seconds later does nothing.",
+  "cl.page": "this page, your settings", "cl.ctrl": "same, without the drug", "cl.full": "full mushroom body simulation",
+  "cv.first": "dopamine first", "cv.after": "dopamine after the smell", "cv.smell": "smell", "cv.pred": "prediction: not tested on the full network",
+  "s3.eb": "One connection, magnified", "s3.h": "Inside the memory spot",
+  "s3.p": "The same moment as the playhead above, drawn as a single Kenyon cell ending, the dopamine neuron next to it and the avoid neuron it talks to.",
+  "s4.eb": "Why timing matters", "s4.h": "Two molecular timers",
+  "s4.p": "Multiplying \"dopamine\" by \"activity\" can never flip the sign: dopamine lingers for seconds, so both orders look like overlap. The flip needs molecules that notice which signal came first. Kenyon cells have two.",
+  "d1.h": "Calcium, then dopamine → weaker", "d1.p": "An enzyme called the rutabaga cyclase responds most when calcium from a firing cell arrives before the dopamine signal. Dopamine landing on a cell that has just fired weakens its connection.",
+  "d2.h": "Dopamine, then calcium → stronger", "d2.p": "The IP₃ receptor opens when calcium arrives while a second dopamine signal (IP₃) is already there. So dopamine first, then the smell, strengthens the connection.",
+  "d3.h": "Dopamine brakes itself", "d3.p": "Dopamine also lands on the dopamine neuron itself, on a receptor called Dop2R, and slows further release. Block that brake with flupentixol and there is about four times more dopamine.",
+  "s5.eb": "Honesty", "s5.h": "What is real here and what is drawn",
+  "real.h": "Real data",
+  real: ["The position of every one of the 139,248 neurons (FlyWire v783).", "The 2,556 connections from Kenyon cells to the avoid neuron, and which cells they come from.", "The shape of the brain and its regions (FlyWire; regions from Ito et al. 2014, mapped by the fafbseg project).", "Every number in the model, with its source in the table below."],
+  "drawn.h": "Drawn to make it visible",
+  drawn: ["Neurons are drawn as small spheres. Real ones branch like trees.", "Wires follow smooth curves through the mushroom body, not their exact traced path.", "The smell is a random 10% of Kenyon cells.", "The memory spot γ5 is placed at the tip of the mushroom body's inner lobe, an estimate.", "Changes in brightness are exaggerated about three times so you can see them.", "The random twinkling across the brain is decoration, not simulated activity.", "The model runs one compartment of the mushroom body, not the whole brain."],
+  "s6.eb": "For scientists", "s6.h": "Where every number comes from",
+  "s6.p": "Measured: taken directly from a fly experiment. Calibrated: fitted so the model reproduces a named measurement. Assumed: no fly measurement exists yet.",
+  "th.p": "Parameter", "th.v": "Value", "th.s": "Status", "th.src": "Source or target",
+  foot1: "Code, tests and full validation:",
+  foot2: "Connectome: FlyWire v783 (Dorkenwald et al. 2024; Schlegel et al. 2024). Brain outline: FlyWire. Regions: Ito et al. 2014 (JFRC2), in FlyWire space via fafbseg. Whole-brain spiking model: Shiu et al. 2024. The learning model runs in your browser with the same equations and constants as the repository (commit 05f9575), for one compartment and 200 Kenyon cell endings; it leaves out the feedback from Kenyon cells to dopamine neurons that roughly doubles their firing in the full network.",
+  "cut.dan": "dopamine neuron ending", "cut.kc": "Kenyon cell ending", "cut.mbon": "avoid neuron", "cut.brake": "brake", "cut.trace": "calcium memory", "cut.w": "connection",
+  lanes: ["Smell → Kenyon cells", "Dopamine in γ5", "Receptor 1 (weakens)", "Receptor 2 (strengthens)", "Calcium memory", "Connection strength"],
+},
+ru: {
+  eyebrow: "Настоящий мозг мухи · 139 248 нейронов", h1: "Когда приходит дофамин",
+  lede: "Как мозг учится? Залетите внутрь настоящего мозга плодовой мушки и посмотрите, как записывается память, связь за связью.",
+  "q.eco": "Качество: эконом", "q.high": "Качество: высокое", "v.brain": "Весь мозг", "v.mb": "Центр обучения", "v.g5": "Точка памяти", "tour.again": "Экскурсия", layers: "Слои",
+  "lg.kc": "Клетки Кеньона узнают запахи. Те, что включил этот запах, мерцают.",
+  "lg.da": "Дофаминовые нейроны — сигнал учителя. Розовое облако — сам дофамин.",
+  "lg.mbon": "Выходной нейрон, который велит мухе избегать. Светящиеся нити — его настоящие входы.",
+  "lg.shell": "Контур мозга и его областей.",
+  "lg.hint": "тяни — вращать · колесо или щипок — приблизить · правая кнопка — сдвинуть",
+  "tour.back": "Назад", "tour.next": "Дальше", "tour.try": "Попробовать самому", "tour.skip": "Сразу к управлению",
+  "ro.dw": "изменение памяти", "ro.peak": "пик дофамина", "ro.brake": "самоторможение",
+  "vd.ltd": "СЛАБЕЕ", "vd.ltp": "СИЛЬНЕЕ", "vd.none": "ПАМЯТИ НЕТ",
+  "vt.ltd": "Муха стала бы меньше избегать этот запах.", "vt.ltp": "Муха стала бы сильнее избегать этот запах.", "vt.none": "Связь осталась прежней.",
+  "c.onset": "Когда приходит дофамин?", "c.before": "до запаха", "c.smell": "запах", "c.after": "после",
+  "c.rate": "Насколько силён всплеск дофамина?", "c.drug": "Попробуйте препарат или мутанта", "c.replay": "Заново",
+  "c.play": "Пуск", "c.pause": "Пауза", hz: "импульсов в секунду",
+  "on.before": "с до запаха", "on.after": "с после начала запаха", "on.with": "вместе с запахом",
+  cue: "как это работает и откуда числа ↓",
+  "drug.none": "Нет", "drug.d1null": "Убрать рецептор", "drug.flu": "Снять тормоз", "drug.coc": "Кокаин", "drug.fumin": "Нет насоса", "drug.iodo": "Меньше дофамина",
+  "dn.none": "Обычная муха.",
+  "dn.d1null": "Муха без Dop1R1 — рецептора, который ослабляет связь. Посмотрите, что останется.",
+  "dn.flu": "Флупентиксол блокирует Dop2R — тормоз, которым дофаминовые нейроны сдерживают сами себя. Дофамина примерно вчетверо больше.",
+  "dn.coc": "Кокаин замедляет насос, который убирает дофамин, и он задерживается дольше.",
+  "dn.fumin": "У мутанта fumin насоса нет вовсе. Дофамин уходит только медленно, сам по себе.",
+  "dn.iodo": "3-иодтирозин мешает производить дофамин, и каждый импульс выпускает меньше.",
+  "ch.2": "Клетки Кеньона", "ch.6": "Дофаминовые нейроны γ5", "ch.7": "Нейрон «избегай» (MBON-γ5)", "ch.3": "Другие дофаминовые нейроны",
+  "ch.4": "Другие выходные нейроны", "ch.5": "Другой контур обучения (γ1pedc)", "ch.0": "Остальной мозг", "ch.1": "Зрительная система",
+  "ch.w": "Настоящие связи", "ch.s": "Контур мозга и области",
+  "tl.smell": "запах", "tl.da": "дофамин", "tl.level": "уровень дофамина", "tl.w": "связь",
+  "tag.live": "точка памяти γ5", "tag.al": "Антеннальная доля: сюда приходят запахи", "tag.ca": "Чашечка: клетки Кеньона", "tag.ped": "Ножка", "tag.g5": "γ5: здесь пишется память",
+  "tag.mbon": "Нейрон «избегай»", "tag.pam": "Дофаминовые нейроны", "tag.mb": "Грибовидное тело",
+  steps: [
+    ["Это весь мозг плодовой мушки", "Он размером с маковое зёрнышко. Каждая светящаяся точка — настоящий нейрон на своём настоящем месте. Их 139 248, и все прослежены по снимкам электронного микроскопа из мозга одной мухи."],
+    ["Приходит запах", "Запахи улавливают антенны, и сигнал сначала попадает в антеннальные доли — круглые области спереди. Оттуда он поднимается к структуре под названием грибовидное тело."],
+    ["Грибовидное тело — центр обучения мухи", "Здесь живут около 5 000 нейронов — клеток Кеньона. Каждый запах включает свою небольшую группу, как штрихкод. Зелёные клетки мерцают: это и есть запах."],
+    ["Их провода сходятся на нейроне «избегай»", "Светящиеся нити — настоящие связи из карты: 2 556 клеток Кеньона тянут провода к одному выходному нейрону (синий). Когда он срабатывает, муха стремится уйти от запаха."],
+    ["Дофамин — сигнал учителя", "Когда происходит что-то важное, дофаминовые нейроны (розовые) срабатывают и заливают эту крошечную точку дофамином. Розовое облако — дофамин, ровно там, где сходятся провода."],
+    ["Память — это изменённая связь", "Дофамин ослабил провода от клеток, которые включил этот запах. Смотрите, как они тускнеют. Теперь запах тише «говорит» нейрону «избегай», и муха избегает его меньше."],
+    ["Главный поворот — время", "Придёт через полсекунды после запаха — связь ослабнет. Придёт за секунду до — тот же дофамин её усилит. Ваша очередь: подвигайте ползунок."],
+  ],
+  "s0.eb": "Что вы видите", "s0.h": "Карта каждого нейрона мозга",
+  "s0.p": "В 2024 году проект FlyWire опубликовал полную схему соединений мозга взрослой плодовой мушки. Мозг одной мухи разрезали примерно на 7 000 срезов толщиной около 40 нанометров — это в тысячу с лишним раз тоньше волоса. Электронный микроскоп сфотографировал каждый срез, ИИ проследил каждый нейрон сквозь всю стопку, а сотни учёных и добровольцев проверили результат вручную.",
+  f1: "нейронов, каждый показан выше на своём настоящем месте", f2: "срезов, каждый сфотографирован электронным микроскопом", f3: "связей между нейронами, все известны",
+  "s1.eb": "Прогон сверху, шаг за шагом", "s1.h": "Как записывается память",
+  "s1.p": "Запах включает клетки Кеньона на 2 секунды. Дофаминовые нейроны срабатывают на 1 секунду. Дофамин включает два рецептора с разной скоростью, а каждая клетка Кеньона хранит короткую кальциевую «память» о том, что только что была активна. Связь меняется только там, где всё это совпадает в правильном порядке.",
+  "s2.eb": "Handler et al. 2019, Cell", "s2.h": "Тот же дофамин — противоположная память",
+  "s2.p": "Линия — модель этой страницы, пересчитанная для каждого момента прихода дофамина: от 4 с до запаха до 8 с после. Точки — полная симуляция грибовидного тела, 5 608 нейронов, соединённых как у настоящей мухи. У живых мух та же картина: дофамин до запаха усиливает, во время или сразу после — ослабляет, а через много секунд — ничего не делает.",
+  "cl.page": "эта страница, ваши настройки", "cl.ctrl": "то же без препарата", "cl.full": "полная симуляция грибовидного тела",
+  "cv.first": "дофамин раньше", "cv.after": "дофамин после запаха", "cv.smell": "запах", "cv.pred": "прогноз: на полной сети не проверялось",
+  "s3.eb": "Одна связь под увеличением", "s3.h": "Внутри точки памяти",
+  "s3.p": "Тот же момент, что на таймлайне сверху: одно окончание клетки Кеньона, дофаминовый нейрон рядом и нейрон «избегай», с которым она говорит.",
+  "s4.eb": "Почему важно время", "s4.h": "Два молекулярных таймера",
+  "s4.p": "Если просто умножать «дофамин» на «активность», знак никогда не перевернётся: дофамин держится секундами, и любой порядок выглядит как совпадение. Чтобы знак менялся, нужны молекулы, которые замечают, какой сигнал пришёл первым. У клеток Кеньона их две.",
+  "d1.h": "Кальций, потом дофамин → слабее", "d1.p": "Фермент rutabaga-циклаза сильнее всего отвечает, когда кальций от сработавшей клетки приходит раньше дофаминового сигнала. Дофамин, упавший на только что сработавшую клетку, ослабляет её связь.",
+  "d2.h": "Дофамин, потом кальций → сильнее", "d2.p": "IP₃-рецептор открывается, когда кальций приходит, пока второй дофаминовый сигнал (IP₃) уже на месте. Поэтому сначала дофамин, потом запах — и связь усиливается.",
+  "d3.h": "Дофамин тормозит сам себя", "d3.p": "Дофамин попадает и на сам дофаминовый нейрон — на рецептор Dop2R — и замедляет дальнейший выброс. Снимите этот тормоз флупентиксолом, и дофамина станет примерно вчетверо больше.",
+  "s5.eb": "Честно", "s5.h": "Что здесь настоящее, а что нарисовано",
+  "real.h": "Настоящие данные",
+  real: ["Положение каждого из 139 248 нейронов (FlyWire v783).", "2 556 связей от клеток Кеньона к нейрону «избегай» и то, от каких именно клеток они идут.", "Форма мозга и его областей (FlyWire; области — Ito et al. 2014, перенесены проектом fafbseg).", "Каждое число модели — с источником в таблице ниже."],
+  "drawn.h": "Нарисовано, чтобы было видно",
+  drawn: ["Нейроны нарисованы шариками. Настоящие ветвятся, как деревья.", "Провода идут по плавным кривым через грибовидное тело, а не точно по прослеженному пути.", "Запах — это случайные 10% клеток Кеньона.", "Точка памяти γ5 поставлена на кончик внутренней доли грибовидного тела — это оценка.", "Изменения яркости усилены примерно втрое, чтобы их было видно.", "Случайное мерцание по всему мозгу — украшение, а не симуляция.", "Модель считает один компартмент грибовидного тела, а не весь мозг."],
+  "s6.eb": "Для учёных", "s6.h": "Откуда каждое число",
+  "s6.p": "Measured — взято прямо из опыта на мухах. Calibrated — подогнано, чтобы модель воспроизводила названное измерение. Assumed — измерений на мухах пока нет.",
+  "th.p": "Параметр", "th.v": "Значение", "th.s": "Статус", "th.src": "Источник или цель",
+  foot1: "Код, тесты и полная валидация:",
+  foot2: "Коннектом: FlyWire v783 (Dorkenwald et al. 2024; Schlegel et al. 2024). Контур мозга: FlyWire. Области: Ito et al. 2014 (JFRC2), в пространстве FlyWire через fafbseg. Спайковая модель всего мозга: Shiu et al. 2024. Модель обучения считается в вашем браузере по тем же уравнениям и константам, что в репозитории (коммит 05f9575), для одного компартмента и 200 окончаний клеток Кеньона; в ней нет обратной связи от клеток Кеньона к дофаминовым нейронам, которая в полной сети примерно удваивает их частоту.",
+  "cut.dan": "окончание дофаминового нейрона", "cut.kc": "окончание клетки Кеньона", "cut.mbon": "нейрон «избегай»", "cut.brake": "тормоз", "cut.trace": "кальциевая память", "cut.w": "связь",
+  lanes: ["Запах → клетки Кеньона", "Дофамин в γ5", "Рецептор 1 (ослабляет)", "Рецептор 2 (усиливает)", "Кальциевая память", "Сила связи"],
+},
+};
+let lang = "en";
+try { lang = localStorage.getItem("lang") || ((navigator.language || "").toLowerCase().startsWith("ru") ? "ru" : "en"); } catch (e) {
+  lang = (navigator.language || "").toLowerCase().startsWith("ru") ? "ru" : "en";
+}
+const T = (k) => (L[lang][k] !== undefined ? L[lang][k] : L.en[k]);
+/* eco: 30 frames per second and a lighter render, so a laptop stays cool */
+let quality = "eco";
+try { quality = localStorage.getItem("quality") || "eco"; } catch (e) { quality = "eco"; }
+const QUALITY = { eco: { fps: 30, dpr: 1.25, bloom: true }, high: { fps: 60, dpr: 1.75, bloom: true } };
+
+/* ================================================================ model
+   Single-compartment port of fly-neuromod (commit 05f9575): the same
+   equations and constants as src/flyneuromod/neuromod/*.py, 1 ms step. */
+const P = {
+  perSpike: 0.0145, vmax: 0.30, km: 1.3, kdiff: 0.12,
+  d2: { ec50: 0.20, on: 1.0, off: 5.0 }, maxSupp: 0.90, minGain: 0.10,
+  d1: { ec50: 0.61, on: 2.2, off: 5.0 },
+  dq: { ec50: 0.0567, on: 0.37, off: 2.0 },
+  tauCa: 1.0, tauE: 2.0, rDep: 1.5, rPot: 0.6, wMax: 1.5,
+  odDur: 2.0, daDur: 1.0, kcRate: 10,
+};
+const DRUGS = [
+  { id: "none" }, { id: "d1null", d1scale: 0 }, { id: "flu", d2block: true },
+  { id: "coc", kmF: 3 }, { id: "fumin", kmF: 20 }, { id: "iodo", relF: 0.3 },
+];
+const DT = 1e-3, T0 = -6, T1 = 12, REC = 20;
+function mulberry32(a) {
+  return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+const dec = (tau) => Math.exp(-DT / tau);
+const K = { d2on: dec(P.d2.on), d2off: dec(P.d2.off), d1on: dec(P.d1.on), d1off: dec(P.d1.off),
+  dqon: dec(P.dq.on), dqoff: dec(P.dq.off), ca: dec(P.tauCa), el: dec(P.tauE) };
+
+function simulate({ onset, daRate, drug, nKC = 200, seed = 7, record = true, rasterN = 14 }) {
+  const rng = mulberry32(seed);
+  const km = P.km * (drug.kmF || 1), rel = P.perSpike * (drug.relF || 1), d1s = drug.d1scale ?? 1;
+  let c = 0, o2 = 0, o1 = 0, oq = 0, ca = 0, prev = 0, gain = 1, peak = 0, minGain = 1;
+  const el = new Float64Array(nKC), w = new Float64Array(nKC).fill(1);
+  const n = Math.round((T1 - T0) / DT);
+  const out = record ? { t: [], c: [], gs: [], ip3: [], el: [], w: [], gain: [], spikes: [] } : null;
+  const odOn = Math.round(-T0 / DT), odOff = Math.round((P.odDur - T0) / DT);
+  const daOn = Math.round((onset - T0) / DT), daOff = Math.round((onset + P.daDur - T0) / DT);
+  const pSpike = P.kcRate * DT, spikesPerStep = daRate * DT;
+  for (let i = 0; i < n; i++) {
+    if (i >= daOn && i < daOff) c += rel * gain * spikesPerStep;       // release, braked by Dop2R
+    c += DT * -(P.vmax * c / (km + c) + P.kdiff * c);                   // transporter + diffusion
+    if (c < 0) c = 0;
+    if (c > peak) peak = c;
+    const t2 = drug.d2block ? 0 : c / (c + P.d2.ec50);
+    o2 = t2 + (o2 - t2) * (t2 > o2 ? K.d2on : K.d2off);
+    gain = Math.min(Math.max(1 - P.maxSupp * o2, P.minGain), 1);
+    if (gain < minGain) minGain = gain;
+    const t1 = d1s * c / (c + P.d1.ec50);
+    o1 = t1 + (o1 - t1) * (t1 > o1 ? K.d1on : K.d1off);
+    const tq = c / (c + P.dq.ec50);
+    oq = tq + (oq - tq) * (tq > oq ? K.dqon : K.dqoff);
+    ca = oq + (ca - oq) * K.ca;
+    const gs = Math.min(o1, 1), arrival = Math.max(gs - prev, 0); prev = gs;
+    const odour = i >= odOn && i < odOff, ip3 = Math.max(ca, 0);
+    for (let k = 0; k < nKC; k++) {
+      const active = odour && rng() < pSpike ? 1 : 0;
+      if (record && active && k < rasterN) out.spikes.push(k, T0 + i * DT);
+      el[k] *= K.el;
+      const dep = P.rDep * arrival * el[k];
+      const head = 1 - el[k], carr = head * active;
+      const pot = P.rPot * ip3 * carr * head;
+      el[k] += carr;
+      const v = w[k] + pot - dep;
+      w[k] = v < 0 ? 0 : v > P.wMax ? P.wMax : v;
+    }
+    if (record && i % REC === 0) {
+      let se = 0, sw = 0; for (let k = 0; k < nKC; k++) { se += el[k]; sw += w[k]; }
+      out.t.push(T0 + i * DT); out.c.push(c); out.gs.push(gs); out.ip3.push(ip3);
+      out.el.push(se / nKC); out.w.push(sw / nKC); out.gain.push(gain);
+    }
+  }
+  let sw = 0; for (let k = 0; k < nKC; k++) sw += w[k];
+  return { rec: out, dw: sw / nKC - 1, peak, minGain };
+}
+const CONNECTOME = [[-1.2, 14.6], [-0.5, -9.7], [0, -16.9], [0.5, -14.7], [6, 3.0]];
+
+/* ================================================================ state */
+const DEF = { onset: 0.5, daRate: 20 };
+const state = { onset: DEF.onset, daRate: DEF.daRate, drug: DRUGS[0], run: null, playing: !reduceMotion, speed: 1, t: -1.5, curve: null, control: null };
+const VIEW0 = -5, VIEW1 = 10;
+const sign = (v, eps = 0) => (v > eps ? "+" : v < -eps ? "−" : "");
+const fmtPct = (v) => sign(v, 0.0005) + Math.abs(v * 100).toFixed(1) + "%";
+const num = (v, d = 1) => (lang === "ru" ? v.toFixed(d).replace(".", ",") : v.toFixed(d));
+const restartAt = () => Math.min(state.onset - 0.8, -1.5);
+function describeOnset(o) {
+  if (o < -0.05) return `${num(Math.abs(o))} ${T("on.before")}`;
+  if (o > 0.05) return `${num(o)} ${T("on.after")}`;
+  return T("on.with");
+}
+function idxAt(t) { const r = state.run.rec; const i = Math.round((t - T0) / (DT * REC)); return Math.max(0, Math.min(r.t.length - 1, i)); }
+function at(t) {
+  const r = state.run.rec, i = idxAt(t);
+  return { c: r.c[i], gs: r.gs[i], ip3: r.ip3[i], el: r.el[i], w: r.w[i], gain: r.gain[i],
+    odour: t >= 0 && t < P.odDur, daOn: t >= state.onset && t < state.onset + P.daDur };
+}
+
+function renderReadouts() {
+  const r = state.run; if (!r) return;
+  $("r-dw").textContent = fmtPct(r.dw);
+  $("r-dw").style.color = r.dw > 0.02 ? "var(--focus)" : r.dw < -0.02 ? "var(--mbon)" : "var(--text)";
+  $("r-peak").textContent = num(r.peak, 2) + " µM";
+  $("r-brake").textContent = Math.round((1 - r.minGain) * 100) + "%";
+  const kind = r.dw < -0.02 ? "ltd" : r.dw > 0.02 ? "ltp" : "none";
+  $("verdict").className = "pill " + kind; $("verdict").textContent = T("vd." + kind); $("verdict-txt").textContent = T("vt." + kind);
+  $("o-onset").textContent = describeOnset(state.onset);
+  $("o-darate").textContent = `${state.daRate} ${T("hz")}`;
+}
+function recompute() { state.run = simulate({ onset: state.onset, daRate: state.daRate, drug: state.drug }); renderReadouts(); }
+let curveTimer = 0;
+function recomputeCurve() {
+  clearTimeout(curveTimer);
+  curveTimer = setTimeout(() => {
+    const xs = []; for (let x = -4; x <= 8.001; x += 0.25) xs.push(+x.toFixed(2));
+    const run = (drug) => xs.map((x) => [x, 100 * simulate({ onset: x, daRate: state.daRate, drug, nKC: 40, seed: 11, record: false }).dw]);
+    state.curve = run(state.drug);
+    state.control = state.drug.id === "none" ? null : run(DRUGS[0]);
+    $("lg-control").hidden = !state.control;
+    drawCurve();
+  }, 140);
+}
+
+/* ================================================================ controls */
+function setPlaying(on) { if (reduceMotion && on) on = false; state.playing = on; $("play").textContent = T(on ? "c.pause" : "c.play"); }
+function buildDrugChips() {
+  const box = $("drugs");
+  box.replaceChildren(...DRUGS.map((d) => {
+    const b = document.createElement("button");
+    b.className = "chip"; b.type = "button"; b.textContent = T("drug." + d.id); b.dataset.id = d.id;
+    b.setAttribute("aria-pressed", String(d.id === state.drug.id));
+    b.addEventListener("click", () => selectDrug(d));
+    return b;
+  }));
+  $("drug-note").textContent = T("dn." + state.drug.id);
+}
+function selectDrug(d) {
+  state.drug = d; buildDrugChips(); recompute(); recomputeCurve(); state.t = restartAt(); setPlaying(true);
+}
+$("onset").addEventListener("input", (e) => { state.onset = +e.target.value; recompute(); state.t = restartAt(); drawCurve(); });
+$("onset").addEventListener("change", () => setPlaying(true));
+$("darate").addEventListener("input", (e) => { state.daRate = +e.target.value; recompute(); recomputeCurve(); });
+$("play").addEventListener("click", () => setPlaying(!state.playing));
+$("replay").addEventListener("click", () => { state.t = restartAt(); setPlaying(true); });
+$("speeds").querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => {
+  state.speed = +b.dataset.speed;
+  $("speeds").querySelectorAll(".chip").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+}));
+function resetParams() {
+  state.onset = DEF.onset; state.daRate = DEF.daRate; state.drug = DRUGS[0];
+  $("onset").value = DEF.onset; $("darate").value = DEF.daRate; buildDrugChips(); recompute(); recomputeCurve();
+}
+
+/* ================================================================ 2D drawing */
+function fit(canvas) {
+  const dpr = Math.min(devicePixelRatio || 1, 2), r = canvas.getBoundingClientRect();
+  const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+  const ctx = canvas.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, w: r.width, h: r.height };
+}
+const C = { kc: "#57e08a", da: "#ff4fb0", mbon: "#5ab4ff", focus: "#ffb84d", ip3: "#b58cff",
+  text: "#e2e6ec", muted: "#8c95a4", faint: "#586274", line: "#1b212b", line2: "#28303d", panel: "#0c0f14" };
+const MONO = "'JetBrains Mono', ui-monospace, monospace";
+function linePath(ctx, r, key, X, Y) {
+  ctx.beginPath(); let started = false;
+  for (let i = 0; i < r.t.length; i++) {
+    const t = r.t[i]; if (t < VIEW0 || t > VIEW1) continue;
+    const x = X(t), y = Y(r[key][i]); if (started) ctx.lineTo(x, y); else { ctx.moveTo(x, y); started = true; }
+  }
+}
+function weightRange(r) {
+  const lo = Math.min(...r.w), hi = Math.max(...r.w), pad = Math.max(0.03, (hi - lo) * 0.25);
+  return [Math.min(lo, 1) - pad, Math.max(hi, 1) + pad];
+}
+const TL = { left: 120, right: 10 };
+function drawTimeline() {
+  if (!state.run) return;
+  const { ctx, w, h } = fit($("tl")), r = state.run.rec;
+  ctx.clearRect(0, 0, w, h);
+  const Lx = TL.left, R = w - TL.right, top = 4, bot = h - 18;
+  const X = (t) => Lx + ((t - VIEW0) / (VIEW1 - VIEW0)) * (R - Lx);
+  ctx.font = `10.5px ${MONO}`; ctx.textAlign = "left";
+  const barY = top + 2;
+  ctx.fillStyle = "rgba(87,224,138,.85)"; ctx.fillRect(X(0), barY, X(P.odDur) - X(0), 6);
+  const a = Math.max(state.onset, VIEW0), b = Math.min(state.onset + P.daDur, VIEW1);
+  ctx.fillStyle = "rgba(255,79,176,.9)"; if (b > a) ctx.fillRect(X(a), barY + 9, X(b) - X(a), 6);
+  ctx.fillStyle = C.muted; ctx.fillText(T("tl.smell"), 4, barY + 7); ctx.fillText(T("tl.da"), 4, barY + 16);
+  const y0 = barY + 22, y1 = y0 + (bot - y0) * 0.5 - 4, cmax = Math.max(0.5, state.run.peak * 1.1);
+  const Yc = (v) => y1 - (v / cmax) * (y1 - y0);
+  linePath(ctx, r, "c", X, Yc); ctx.strokeStyle = C.da; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.lineTo(X(VIEW1), y1); ctx.lineTo(X(VIEW0), y1); ctx.closePath(); ctx.fillStyle = "rgba(255,79,176,.16)"; ctx.fill();
+  ctx.fillStyle = C.muted; ctx.fillText(T("tl.level"), 4, (y0 + y1) / 2 + 3);
+  const z0 = y1 + 8, z1 = bot - 2, [lo, hi] = weightRange(r);
+  const Yw = (v) => z1 - ((v - lo) / (hi - lo)) * (z1 - z0);
+  ctx.setLineDash([3, 4]); ctx.strokeStyle = C.faint; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(Lx, Yw(1)); ctx.lineTo(R, Yw(1)); ctx.stroke(); ctx.setLineDash([]);
+  linePath(ctx, r, "w", X, Yw); ctx.strokeStyle = C.focus; ctx.lineWidth = 1.8; ctx.stroke();
+  ctx.fillStyle = C.muted; ctx.fillText(T("tl.w"), 4, (z0 + z1) / 2 + 3);
+  ctx.fillStyle = C.faint; ctx.textAlign = "center";
+  for (let t = -4; t <= 10; t += 2) ctx.fillText(sign(t) + Math.abs(t) + " s", X(t), h - 4);
+  const px = X(Math.min(Math.max(state.t, VIEW0), VIEW1));
+  ctx.strokeStyle = C.text; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(px, top); ctx.lineTo(px, bot); ctx.stroke();
+  ctx.fillStyle = C.text; ctx.beginPath(); ctx.moveTo(px - 5, top); ctx.lineTo(px + 5, top); ctx.lineTo(px, top + 6); ctx.closePath(); ctx.fill();
+  const s = at(state.t), flipSide = px > R - 90, dx = flipSide ? -8 : 8;
+  ctx.textAlign = flipSide ? "right" : "left"; ctx.font = `500 11px ${MONO}`;
+  ctx.fillText(`${state.t >= 0 ? "+" : "−"}${num(Math.abs(state.t), 2)} s`, px + dx, barY + 34);
+  ctx.fillStyle = C.da; ctx.fillText(`${num(s.c, 2)} µM`, px + dx, barY + 47);
+}
+(function scrub() {
+  const cv = $("tl"); let down = false;
+  const set = (e) => {
+    const r = cv.getBoundingClientRect(), R = r.width - TL.right;
+    const f = Math.min(1, Math.max(0, (e.clientX - r.left - TL.left) / (R - TL.left)));
+    state.t = VIEW0 + f * (VIEW1 - VIEW0);
+  };
+  cv.addEventListener("pointerdown", (e) => { down = true; cv.setPointerCapture(e.pointerId); setPlaying(false); set(e); });
+  cv.addEventListener("pointermove", (e) => { if (down) set(e); });
+  cv.addEventListener("pointerup", () => { down = false; });
+  cv.addEventListener("pointercancel", () => { down = false; });
+})();
+
+const LANE_KEYS = ["odour", "c", "gs", "ip3", "el", "w"], LANE_COL = [C.kc, C.da, C.da, C.ip3, C.kc, C.focus];
+function drawTraces() {
+  if (!state.run) return;
+  const { ctx, w, h } = fit($("traces")), r = state.run.rec, names = T("lanes");
+  ctx.clearRect(0, 0, w, h);
+  const narrow = w < 560, left = narrow ? 12 : 180, right = w - 12, top = 8, bottom = h - 24;
+  const laneH = (bottom - top) / LANE_KEYS.length;
+  const X = (t) => left + ((t - VIEW0) / (VIEW1 - VIEW0)) * (right - left);
+  ctx.fillStyle = "rgba(87,224,138,.07)"; ctx.fillRect(X(0), top, X(P.odDur) - X(0), bottom - top);
+  const a = Math.max(state.onset, VIEW0), b = Math.min(state.onset + P.daDur, VIEW1);
+  ctx.fillStyle = "rgba(255,79,176,.08)"; if (b > a) ctx.fillRect(X(a), top, X(b) - X(a), bottom - top);
+  ctx.font = `11px ${MONO}`;
+  const cmax = Math.max(0.5, state.run.peak * 1.15), [wmin, wmax] = weightRange(r);
+  LANE_KEYS.forEach((key, li) => {
+    const y0 = top + li * laneH, y1 = y0 + laneH - 8;
+    ctx.strokeStyle = C.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(left, y1 + 4); ctx.lineTo(right, y1 + 4); ctx.stroke();
+    ctx.fillStyle = C.muted; ctx.textAlign = "left";
+    if (narrow) ctx.fillText(names[li], left + 2, y0 + 11); else ctx.fillText(names[li], 8, y0 + laneH / 2 + 2);
+    if (key === "odour") {
+      ctx.fillStyle = C.kc; const rowH = Math.max(2, (y1 - y0 - 16) / 16);
+      for (let s = 0; s < r.spikes.length; s += 2) {
+        const k = r.spikes[s], t = r.spikes[s + 1]; if (t < VIEW0 || t > VIEW1) continue;
+        ctx.fillRect(X(t) - 0.5, y0 + 14 + (k / 14) * (y1 - y0 - 16), 1.2, rowH);
+      }
+      return;
+    }
+    const lo = key === "w" ? wmin : 0, hi = key === "w" ? wmax : key === "c" ? cmax : 1;
+    const Y = (v) => y1 - ((v - lo) / (hi - lo)) * (y1 - y0 - 14);
+    if (key === "w") { ctx.setLineDash([3, 4]); ctx.strokeStyle = C.faint; ctx.beginPath(); ctx.moveTo(left, Y(1)); ctx.lineTo(right, Y(1)); ctx.stroke(); ctx.setLineDash([]); }
+    if (key === "c") { ctx.fillStyle = C.faint; ctx.textAlign = "right"; ctx.fillText(num(cmax) + " µM", right, y0 + 12); ctx.textAlign = "left"; }
+    linePath(ctx, r, key, X, Y); ctx.strokeStyle = LANE_COL[li]; ctx.lineWidth = 1.6; ctx.stroke();
+    if (key === "c") { ctx.lineTo(X(VIEW1), y1); ctx.lineTo(X(VIEW0), y1); ctx.closePath(); ctx.fillStyle = "rgba(255,79,176,.12)"; ctx.fill(); }
+  });
+  ctx.fillStyle = C.faint; ctx.textAlign = "center";
+  for (let t = -4; t <= 10; t += 2) ctx.fillText(sign(t) + Math.abs(t) + " s", X(t), h - 6);
+  const px = X(Math.min(Math.max(state.t, VIEW0), VIEW1));
+  ctx.strokeStyle = "rgba(226,230,236,.55)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px, top); ctx.lineTo(px, bottom); ctx.stroke();
+}
+
+const SVGNS = "http://www.w3.org/2000/svg";
+function sv(tag, attrs, text) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  return e;
+}
+const label = (x, y, text, extra = {}) => sv("text", { x, y, fill: C.faint, "font-size": 11, "font-family": "JetBrains Mono,monospace", ...extra }, text);
+function drawCurve() {
+  if (!state.curve) return;
+  const Lx = 56, R = 736, Tp = 22, B = 290;
+  const all = state.curve.concat(state.control || [], CONNECTOME).map((p) => p[1]);
+  let ymin = Math.min(-5, ...all), ymax = Math.max(5, ...all);
+  const pad = (ymax - ymin) * 0.12; ymin = Math.floor((ymin - pad) / 5) * 5; ymax = Math.ceil((ymax + pad) / 5) * 5;
+  const X = (x) => Lx + ((x + 4) / 12) * (R - Lx), Y = (y) => B - ((y - ymin) / (ymax - ymin)) * (B - Tp);
+  const path = (pts) => pts.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1)).join(" ");
+  const step = ymax - ymin > 60 ? 20 : 10, nodes = [];
+  nodes.push(sv("rect", { x: X(0), y: Tp, width: X(2) - X(0), height: B - Tp, fill: "rgba(87,224,138,.06)" }));
+  nodes.push(sv("rect", { x: Lx, y: Tp, width: X(-1.2) - Lx, height: B - Tp, fill: "rgba(140,149,164,.05)" }));
+  for (let y = Math.ceil(ymin / step) * step; y <= ymax; y += step) {
+    nodes.push(sv("line", { x1: Lx, x2: R, y1: Y(y), y2: Y(y), stroke: y === 0 ? C.line2 : C.line, "stroke-width": 1 }));
+    nodes.push(label(Lx - 8, Y(y) + 4, `${y > 0 ? "+" : ""}${y}%`, { "text-anchor": "end" }));
+  }
+  for (let x = -4; x <= 8; x += 2) nodes.push(label(X(x), B + 20, `${x > 0 ? "+" : ""}${x} s`, { "text-anchor": "middle" }));
+  nodes.push(label(X(-3.9), Tp + 4, T("cv.first"), { fill: C.muted }));
+  nodes.push(label(X(7.9), Tp + 4, T("cv.after"), { fill: C.muted, "text-anchor": "end" }));
+  nodes.push(label(X(1), B - 8, T("cv.smell"), { fill: C.kc, "text-anchor": "middle", "font-size": 10 }));
+  nodes.push(label(X(-2.6), B - 8, T("cv.pred"), { "text-anchor": "middle", "font-size": 10 }));
+  if (state.control) nodes.push(sv("path", { d: path(state.control), fill: "none", stroke: C.muted, "stroke-width": 1.5, "stroke-dasharray": "5 5" }));
+  nodes.push(sv("path", { d: path(state.curve), fill: "none", stroke: C.focus, "stroke-width": 2.4, "stroke-linejoin": "round" }));
+  CONNECTOME.forEach(([x, y]) => {
+    const dot = sv("circle", { cx: X(x), cy: Y(y), r: 5.5, fill: C.text, stroke: C.panel, "stroke-width": 2 });
+    dot.appendChild(sv("title", {}, `${x > 0 ? "+" : ""}${x} s → ${y > 0 ? "+" : ""}${y}%`));
+    nodes.push(dot);
+  });
+  const cx = X(state.onset), cy = Y(state.run ? state.run.dw * 100 : 0);
+  nodes.push(sv("line", { x1: cx, x2: cx, y1: Tp, y2: B, stroke: C.focus, "stroke-width": 1, "stroke-dasharray": "2 4", opacity: 0.7 }));
+  nodes.push(sv("circle", { cx, cy, r: 6, fill: C.focus }));
+  $("curve").replaceChildren(...nodes);
+}
+
+const parts = [];
+function drawCut() {
+  if (!state.run) return;
+  const { ctx, w, h } = fit($("cut")), s = at(state.t);
+  ctx.clearRect(0, 0, w, h);
+  const k = Math.min(w / 600, h / 380);
+  ctx.save(); ctx.translate((w - 600 * k) / 2, (h - 380 * k) / 2); ctx.scale(k, k);
+  const vg = ctx.createRadialGradient(300, 170, 20, 300, 170, 260);
+  vg.addColorStop(0, `rgba(255,79,176,${Math.min(0.22, s.c * 0.35)})`); vg.addColorStop(1, "rgba(255,79,176,0)");
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, 600, 380);
+  ctx.save(); ctx.shadowColor = C.da; ctx.shadowBlur = s.daOn ? 30 : 8;
+  ctx.fillStyle = "#2a0f20"; ctx.strokeStyle = C.da; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(300, 64, 118, 40, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
+  ctx.textAlign = "center"; ctx.fillStyle = C.da; ctx.font = `600 12px ${MONO}`; ctx.fillText(T("cut.dan"), 300, 60);
+  ctx.font = `11px ${MONO}`; ctx.fillStyle = C.muted; ctx.fillText(`${T("cut.brake")} ${Math.round((1 - s.gain) * 100)}%`, 300, 78);
+  const occ2 = (1 - s.gain) / P.maxSupp;
+  [[196, 88], [404, 88], [300, 106]].forEach(([x, y]) => {
+    ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fillStyle = `rgba(255,79,176,${0.15 + 0.85 * occ2})`; ctx.fill();
+    ctx.strokeStyle = C.da; ctx.lineWidth = 1; ctx.stroke();
+  });
+  ctx.save(); ctx.shadowColor = C.kc; ctx.shadowBlur = 10 + 30 * s.el;
+  ctx.fillStyle = `rgba(87,224,138,${0.06 + 0.22 * s.el})`; ctx.strokeStyle = C.kc; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(210, 262, 128, 78, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
+  if (s.odour && !reduceMotion) {
+    for (let j = 0; j < 7; j++) { if (Math.random() < 0.35) { const an = Math.random() * Math.PI * 2, rr = Math.random() * 0.7;
+      ctx.beginPath(); ctx.arc(210 + Math.cos(an) * 110 * rr, 262 + Math.sin(an) * 60 * rr, 3 + Math.random() * 5, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(170,255,200,.55)"; ctx.fill(); } }
+  }
+  ctx.textAlign = "center"; ctx.fillStyle = C.kc; ctx.font = `600 12px ${MONO}`; ctx.fillText(T("cut.kc"), 200, 300);
+  ctx.font = `11px ${MONO}`; ctx.fillStyle = C.muted; ctx.fillText(`${T("cut.trace")} ${num(s.el, 2)}`, 200, 316);
+  [[118, 206, "s"], [160, 192, "d"], [205, 186, "s"], [250, 190, "d"], [292, 202, "s"]].forEach(([x, y, kind]) => {
+    const on = kind === "s" ? s.gs : s.ip3, col = kind === "s" ? "255,79,176" : "181,140,255";
+    ctx.save(); ctx.translate(x, y); if (kind === "d") ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = `rgba(${col},${0.12 + 0.88 * on})`; ctx.strokeStyle = `rgb(${col})`; ctx.lineWidth = 1;
+    ctx.fillRect(-6, -6, 12, 12); ctx.strokeRect(-6, -6, 12, 12); ctx.restore();
+  });
+  const names = T("lanes"); ctx.textAlign = "left"; ctx.fillStyle = C.faint;
+  ctx.fillText("■ " + names[2], 16, 362); ctx.fillText("◆ " + names[3], 230, 362);
+  ctx.save(); ctx.strokeStyle = C.mbon; ctx.lineCap = "round"; ctx.shadowColor = C.mbon; ctx.shadowBlur = 8;
+  ctx.lineWidth = 26; ctx.globalAlpha = 0.25; ctx.beginPath(); ctx.moveTo(600, 200); ctx.quadraticCurveTo(460, 250, 430, 360); ctx.stroke();
+  ctx.globalAlpha = 1; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+  ctx.strokeStyle = C.focus; ctx.lineCap = "round"; ctx.lineWidth = Math.max(1, 9 * s.w);
+  ctx.beginPath(); ctx.moveTo(336, 268); ctx.lineTo(455, 276); ctx.stroke();
+  ctx.textAlign = "right"; ctx.fillStyle = C.mbon; ctx.font = `600 12px ${MONO}`; ctx.fillText(T("cut.mbon"), 592, 186);
+  ctx.textAlign = "center"; ctx.fillStyle = C.focus; ctx.font = `11px ${MONO}`; ctx.fillText(`${T("cut.w")} ${(s.w * 100).toFixed(0)}%`, 396, 300);
+  const target = Math.min(420, Math.round(s.c * 520));
+  while (parts.length < target) { const an = Math.random() * Math.PI, rr = Math.random();
+    parts.push({ x: 300 + Math.cos(an) * 100 * rr, y: 104 + Math.random() * 20, vx: 0, vy: 0 }); }
+  while (parts.length > target) parts.splice(Math.floor(Math.random() * parts.length), 1);
+  ctx.fillStyle = C.da; ctx.globalAlpha = 0.85;
+  for (const p of parts) {
+    if (!reduceMotion) { p.vx = p.vx * 0.9 + (Math.random() - 0.5) * 1.1; p.vy = p.vy * 0.9 + (Math.random() - 0.45) * 1.1; p.x += p.vx; p.y += p.vy; }
+    if (p.y < 104) p.y = 104 + Math.random() * 4; if (p.y > 330) p.vy -= 1;
+    p.x = Math.min(580, Math.max(20, p.x));
+    ctx.fillRect(p.x - 1.3, p.y - 1.3, 2.6, 2.6);
+  }
+  ctx.globalAlpha = 1; ctx.restore();
+}
+
+const PROV = [
+  ["Release per spike", "0.0145 µM", "calibrated", "20 Hz holds 0.35–0.4 µM with the autoreceptor active (Shin & Venton 2022)"],
+  ["Transporter Vₘₐₓ", "0.30 µM/s", "calibrated", "half-decay 1.4–2.7 s in the adult mushroom body (Shin & Venton 2022)"],
+  ["Transporter Kₘ", "1.3 µM", "measured", "Vickrey et al. 2013, larval CNS"],
+  ["Diffusion out of the compartment", "0.12 s⁻¹", "assumed", "transporter-null flies still clear dopamine (Makos et al. 2010)"],
+  ["Dop1R1 EC₅₀ · activation τ", "0.61 µM · 2.2 s", "measured", "Himmelreich et al. 2017, Cell Rep 21:2074"],
+  ["Dop1R2 (Gq) EC₅₀ · activation τ", "0.057 µM · 0.37 s", "measured", "Himmelreich et al. 2017"],
+  ["Dop2R EC₅₀", "0.20 µM", "calibrated", "fourfold rise in evoked dopamine under flupentixol (Shin & Venton 2022)"],
+  ["Autoreceptor maximum suppression", "0.90", "calibrated", "same measurement"],
+  ["Calcium trace τ", "2.0 s", "measured", "pairing works at 0.1–1 s and is gone by 6 s (Handler et al. 2019)"],
+  ["Depression rate", "1.5", "calibrated", "−90% of trained synapses after one pairing on the full connectome (Hige et al. 2015)"],
+  ["Potentiation rate", "0.6", "calibrated", "keeps the 0.4 ratio that places the sign flip (Handler et al. 2019)"],
+  ["Receptor deactivation τ · IP₃ τ", "2–5 s · 1 s", "assumed", "no fly measurements published"],
+];
+$("prov").replaceChildren(...PROV.map(([a, b, st, d]) => {
+  const tr = document.createElement("tr");
+  const td = (text, cls) => { const e = document.createElement("td"); if (cls) e.className = cls; e.textContent = text; return e; };
+  const tagCell = document.createElement("td"), tag = document.createElement("span");
+  tag.className = `tag ${st}`; tag.textContent = st; tagCell.appendChild(tag);
+  tr.append(td(a), td(b, "v"), tagCell, td(d, "muted"));
+  return tr;
+}));
+
+/* ================================================================ 3D brain */
+const CHANNELS = [
+  { id: "2", color: "#57e08a" }, { id: "6", color: "#ff4fb0" }, { id: "7", color: "#5ab4ff" },
+  { id: "w", color: "#9ff0c0" }, { id: "s", color: "#9fb3d9" },
+  { id: "3", color: "#ff8ccc" }, { id: "4", color: "#8fc9ff" }, { id: "5", color: "#c8a6ff" },
+  { id: "0", color: "#7f8da8" }, { id: "1", color: "#5c6b88" },
+];
+const G = { ok: false };
+function hashSeed(i) { const x = Math.sin(i * 12.9898 + 4.1414) * 43758.5453; return x - Math.floor(x); }
+
+function initBrain() {
+  const B = window.BRAIN, canvas = $("brain");
+  if (!window.THREE || !B) return;
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" }); }
+  catch (e) { const m = document.createElement("p"); m.className = "muted"; m.style.padding = "120px 20px"; m.textContent = "WebGL is off in this browser, so the 3D brain cannot be shown."; canvas.replaceWith(m); return; }
+  renderer.setClearColor(0x05070b, 1);
+  const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(40, 1, 0.5, 9000);
+  const lo = B.lo, hi = B.hi;
+  const ctr = [(B.anchors.caL[0] + B.anchors.caR[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2];
+  const W = (p) => new THREE.Vector3(p[0] - ctr[0], -(p[1] - ctr[1]), -(p[2] - ctr[2]));
+  const u8 = (s) => Uint8Array.from(atob(s), (ch) => ch.charCodeAt(0));
+  const u16 = (s) => new Uint16Array(u8(s).buffer);
+  const deq = (q, j, k) => lo[k] + (q[j] / 65535) * (hi[k] - lo[k]);
+  const toW = (q, i, out, o) => { out[o] = deq(q, i * 3, 0) - ctr[0]; out[o + 1] = -(deq(q, i * 3 + 1, 1) - ctr[1]); out[o + 2] = -(deq(q, i * 3 + 2, 2) - ctr[2]); };
+  const n = B.n, soma = u16(B.soma), arbor = u16(B.arbor), cats = u8(B.cat), flags = u8(B.flags);
+  const midX = B.mid - ctr[0];
+  const A = {}; for (const k in B.anchors) if (k !== "mb") A[k] = W(B.anchors[k]); A.mb = W(B.anchors.mb);
+
+  const uni = {
+    uTime: { value: 0 }, uOdour: { value: 0 }, uDan: { value: 0 }, uDanRate: { value: 20 }, uMbon: { value: 0.1 }, uWire: { value: 1 },
+    uScale: { value: 800 }, uMaxPx: { value: 60 }, uFogNear: { value: 600 }, uFogFar: { value: 2600 }, uFog: { value: new THREE.Color(0x05070b) },
+    uVis: { value: [1, 1, 1, 1, 1, 1, 1, 1] }, uWireVis: { value: 1 },
+  };
+  const GLSL_COMMON = `
+    float hash(float x){ return fract(sin(x * 12.9898) * 43758.5453); }
+    float twinkle(float seed, float t){ return step(0.9978, hash(floor(t * 5.0 + seed * 41.0) + seed * 913.0)); }`;
+
+  /* neurons: shaded spheres at the cell body */
+  const pos = new Float32Array(n * 3), cat = new Float32Array(n), flg = new Float32Array(n), seed = new Float32Array(n);
+  for (let i = 0; i < n; i++) { toW(soma, i, pos, i * 3); cat[i] = cats[i]; flg[i] = flags[i]; seed[i] = hashSeed(i); }
+  const ngeo = new THREE.BufferGeometry();
+  ngeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  ngeo.setAttribute("cat", new THREE.BufferAttribute(cat, 1));
+  ngeo.setAttribute("flag", new THREE.BufferAttribute(flg, 1));
+  ngeo.setAttribute("seed", new THREE.BufferAttribute(seed, 1));
+  const colors = ["#44557a", "#35435f", "#3fbf73", "#ff7ec6", "#7fbfff", "#c8a6ff", "#ff4fb0", "#5ab4ff"].map((h) => new THREE.Color(h));
+  const nmat = new THREE.ShaderMaterial({
+    uniforms: { ...uni, uColor: { value: colors }, uSize: { value: [2.9, 2.6, 2.6, 3.6, 4.4, 5.0, 4.2, 7.0] } },
+    vertexShader: `
+      attribute float cat; attribute float flag; attribute float seed;
+      uniform vec3 uColor[8]; uniform float uSize[8]; uniform float uVis[8];
+      uniform float uTime, uOdour, uDan, uDanRate, uMbon, uScale, uMaxPx, uFogNear, uFogFar;
+      varying vec3 vColor; varying float vGlow; varying float vFog;
+      ${GLSL_COMMON}
+      void main(){
+        int c = int(cat + 0.5);
+        float vis = uVis[c];
+        if (vis < 0.5) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); gl_PointSize = 0.0; return; }
+        float glow = twinkle(seed, uTime) * (c <= 1 ? 0.8 : 1.0);
+        bool odourCell = c == 2 && mod(flag, 2.0) > 0.5;
+        if (odourCell && uOdour > 0.5) glow += 0.9 + 2.6 * step(0.55, hash(floor(uTime * 22.0) + seed * 311.0));
+        if (c == 6 && uDan > 0.0) glow += uDan * (1.0 + 2.8 * step(1.0 - uDanRate / 60.0, hash(floor(uTime * 60.0) + seed * 173.0)));
+        if (c == 7) glow += uMbon;
+        vec3 col = uColor[c];
+        if (c == 2 && !odourCell) col *= 0.55;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = clamp(uSize[c] * uScale / -mv.z, 1.2, uMaxPx);
+        vColor = col; vGlow = glow; vFog = smoothstep(uFogNear, uFogFar, -mv.z);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform vec3 uFog; varying vec3 vColor; varying float vGlow; varying float vFog;
+      void main(){
+        vec2 p = gl_PointCoord * 2.0 - 1.0; p.y = -p.y;
+        float r2 = dot(p, p); if (r2 > 1.0) discard;
+        vec3 nrm = vec3(p, sqrt(1.0 - r2));
+        vec3 Ld = normalize(vec3(-0.35, 0.55, 0.75));
+        float diff = max(dot(nrm, Ld), 0.0);
+        float spec = pow(max(dot(reflect(-Ld, nrm), vec3(0.0, 0.0, 1.0)), 0.0), 28.0);
+        float rim = pow(1.0 - nrm.z, 2.0);
+        vec3 col = vColor * (0.22 + 0.95 * diff) + vec3(0.9, 0.95, 1.0) * spec * 0.35 + vColor * rim * 0.35;
+        col += vColor * vGlow * 1.7;
+        col = mix(col, uFog, vFog * 0.92);
+        gl_FragColor = vec4(col, 1.0);
+      }`,
+  });
+  const neurons = new THREE.Points(ngeo, nmat);
+  scene.add(neurons);
+
+  /* fibres: a short thread from each cell body to a point on its arbor */
+  const fib = [], fu = [], fc = [], fs = [];
+  for (let i = 0; i < n; i++) {
+    const j = i * 3;
+    if (soma[j] === arbor[j] && soma[j + 1] === arbor[j + 1] && soma[j + 2] === arbor[j + 2]) continue;
+    const a = [0, 0, 0], b = [0, 0, 0]; toW(soma, i, a, 0); toW(arbor, i, b, 0);
+    fib.push(...a, ...b); fu.push(0, 1); fc.push(cats[i], cats[i]); fs.push(seed[i], seed[i]);
+  }
+  const fgeo = new THREE.BufferGeometry();
+  fgeo.setAttribute("position", new THREE.Float32BufferAttribute(fib, 3));
+  fgeo.setAttribute("u", new THREE.Float32BufferAttribute(fu, 1));
+  fgeo.setAttribute("cat", new THREE.Float32BufferAttribute(fc, 1));
+  fgeo.setAttribute("seed", new THREE.Float32BufferAttribute(fs, 1));
+  const fmat = new THREE.ShaderMaterial({
+    uniforms: { ...uni, uColor: nmat.uniforms.uColor },
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `
+      attribute float u; attribute float cat; attribute float seed;
+      uniform vec3 uColor[8]; uniform float uVis[8]; uniform float uTime, uFogNear, uFogFar;
+      varying vec3 vCol; ${GLSL_COMMON}
+      void main(){
+        int c = int(cat + 0.5);
+        float a = mix(0.32, 0.02, u) * uVis[c] + twinkle(seed, uTime) * (1.0 - u) * 1.4 * uVis[c];
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vCol = uColor[c] * a * (1.0 - 0.9 * smoothstep(uFogNear, uFogFar, -mv.z));
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `varying vec3 vCol; void main(){ gl_FragColor = vec4(vCol, 1.0); }`,
+  });
+  scene.add(new THREE.LineSegments(fgeo, fmat));
+
+  /* real wiring: every Kenyon cell wired to MBON-gamma5, along the mushroom body */
+  const rnd = mulberry32(99);
+  const gauss = () => { let a = 0, b = 0; while (!a) a = rnd(); while (!b) b = rnd(); return Math.sqrt(-2 * Math.log(a)) * Math.cos(2 * Math.PI * b); };
+  const SEG = 26, wp = [], wu = [], ws = [], wf = [];
+  const bez = (p0, p1, p2, p3, t) => {
+    const m = 1 - t;
+    return new THREE.Vector3().addScaledVector(p0, m * m * m).addScaledVector(p1, 3 * m * m * t).addScaledVector(p2, 3 * m * t * t).addScaledVector(p3, t * t * t);
+  };
+  let wiredOdour = 0;
+  for (let i = 0; i < n; i++) {
+    if (cats[i] !== 2 || !(flags[i] & 2)) continue;
+    const s0 = new THREE.Vector3(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
+    const R = s0.x >= midX, sfx = R ? "R" : "L";
+    const jit = () => new THREE.Vector3(gauss(), gauss(), gauss());
+    const p1 = A["ped" + sfx].clone().add(jit().multiplyScalar(5));
+    const p2 = A["jn" + sfx].clone().add(jit().multiplyScalar(5));
+    const p3 = A["g5" + sfx].clone().add(jit().multiplyScalar(4));
+    const sd = hashSeed(i + 7), od = flags[i] & 1 ? 1 : 0; wiredOdour += od;
+    let prev = s0;
+    for (let k = 1; k <= SEG; k++) {
+      const q = bez(s0, p1, p2, p3, k / SEG);
+      wp.push(prev.x, prev.y, prev.z, q.x, q.y, q.z); wu.push((k - 1) / SEG, k / SEG); ws.push(sd, sd); wf.push(od, od); prev = q;
+    }
+  }
+  const wgeo = new THREE.BufferGeometry();
+  wgeo.setAttribute("position", new THREE.Float32BufferAttribute(wp, 3));
+  wgeo.setAttribute("u", new THREE.Float32BufferAttribute(wu, 1));
+  wgeo.setAttribute("seed", new THREE.Float32BufferAttribute(ws, 1));
+  wgeo.setAttribute("odour", new THREE.Float32BufferAttribute(wf, 1));
+  const wmat = new THREE.ShaderMaterial({
+    uniforms: uni, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `
+      attribute float u; attribute float seed; attribute float odour;
+      uniform float uTime, uOdour, uWire, uWireVis, uFogNear, uFogFar; varying vec3 vCol;
+      void main(){
+        vec3 green = vec3(0.34, 0.88, 0.54), amber = vec3(1.0, 0.72, 0.30);
+        vec3 col = mix(green, amber, smoothstep(0.82, 1.0, u));
+        float a = (odour > 0.5 ? 0.30 * uWire : 0.035) * (1.0 - 0.75 * smoothstep(0.7, 1.0, u));
+        if (odour > 0.5 && uOdour > 0.5) {
+          float d = u - fract(uTime * 0.9 + seed);
+          a += 3.2 * exp(-d * d * 260.0) * max(uWire, 0.35) * (1.0 - 0.6 * smoothstep(0.8, 1.0, u));
+        }
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vCol = col * a * uWireVis * (1.0 - 0.85 * smoothstep(uFogNear, uFogFar, -mv.z));
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `varying vec3 vCol; void main(){ gl_FragColor = vec4(vCol, 1.0); }`,
+  });
+  scene.add(new THREE.LineSegments(wgeo, wmat));
+
+  /* PAM-gamma5 dopamine neurons reach into gamma5 */
+  const pp = [], pu = [], psd = []; const pamR = new THREE.Vector3(); let pamN = 0;
+  for (let i = 0; i < n; i++) {
+    if (cats[i] !== 6) continue;
+    const s0 = new THREE.Vector3(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
+    const R = s0.x >= midX; if (R) { pamR.add(s0); pamN++; }
+    const g = A["g5" + (R ? "R" : "L")], mid = s0.clone().lerp(g, 0.5).add(new THREE.Vector3(0, 14, 0));
+    let prev = s0; const sd = hashSeed(i + 3);
+    for (let k = 1; k <= 16; k++) {
+      const t = k / 16, m = 1 - t;
+      const q = new THREE.Vector3().addScaledVector(s0, m * m).addScaledVector(mid, 2 * m * t).addScaledVector(g, t * t);
+      pp.push(prev.x, prev.y, prev.z, q.x, q.y, q.z); pu.push((k - 1) / 16, k / 16); psd.push(sd, sd); prev = q;
+    }
+  }
+  if (pamN) pamR.multiplyScalar(1 / pamN);
+  const pgeo = new THREE.BufferGeometry();
+  pgeo.setAttribute("position", new THREE.Float32BufferAttribute(pp, 3));
+  pgeo.setAttribute("u", new THREE.Float32BufferAttribute(pu, 1));
+  pgeo.setAttribute("seed", new THREE.Float32BufferAttribute(psd, 1));
+  const pmat = new THREE.ShaderMaterial({
+    uniforms: uni, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `
+      attribute float u; attribute float seed; uniform float uTime, uDan, uDanRate, uVis[8]; varying vec3 vCol;
+      void main(){
+        float a = 0.12;
+        if (uDan > 0.0) { float ph = fract(uTime * uDanRate * 0.22 - u * 1.3 + seed); a += 3.0 * uDan * step(ph, 0.1); }
+        vCol = vec3(1.0, 0.31, 0.69) * a * uVis[6];
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `varying vec3 vCol; void main(){ gl_FragColor = vec4(vCol, 1.0); }`,
+  });
+  scene.add(new THREE.LineSegments(pgeo, pmat));
+
+  /* MBON-gamma5: a tube from gamma5 to its cell body, lit by what it receives */
+  const tubeMat = new THREE.ShaderMaterial({
+    uniforms: uni, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+      void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `uniform float uTime, uMbon, uOdour, uVis[8]; varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+      void main(){
+        float core = pow(abs(dot(vN, vV)), 1.5);
+        float d = vUv.x - fract(uTime * 0.8);
+        float pulse = uOdour > 0.5 ? 2.5 * exp(-d * d * 120.0) * uMbon : 0.0;
+        vec3 col = vec3(0.35, 0.7, 1.0) * (0.25 + 0.8 * uMbon + pulse) * (0.35 + 0.65 * core);
+        gl_FragColor = vec4(col * uVis[7], 1.0);
+      }`,
+  });
+  ["L", "R"].forEach((sfx) => {
+    const g = A["g5" + sfx], m = A["mbon" + sfx]; if (!m) return;
+    const c1 = g.clone().lerp(m, 0.4).add(new THREE.Vector3(0, 12, 6));
+    const curve = new THREE.CatmullRomCurve3([g, c1, m]);
+    scene.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 80, 1.3, 10, false), tubeMat));
+  });
+
+  /* dopamine: a cloud of molecules around each gamma5 */
+  const N = 1800, cpos = new Float32Array(2 * N * 3), rank = new Float32Array(2 * N), phase = new Float32Array(2 * N);
+  ["L", "R"].forEach((sfx, s) => { const g = A["g5" + sfx];
+    for (let j = 0; j < N; j++) { const i = s * N + j;
+      cpos[i * 3] = g.x + gauss() * 11; cpos[i * 3 + 1] = g.y + gauss() * 9; cpos[i * 3 + 2] = g.z + gauss() * 11;
+      rank[i] = rnd(); phase[i] = rnd() * 6.283; } });
+  const cgeo = new THREE.BufferGeometry();
+  cgeo.setAttribute("position", new THREE.BufferAttribute(cpos, 3));
+  cgeo.setAttribute("rank", new THREE.BufferAttribute(rank, 1));
+  cgeo.setAttribute("phase", new THREE.BufferAttribute(phase, 1));
+  const cuni = { ...uni, uLevel: { value: 0 } };
+  const cmat = new THREE.ShaderMaterial({
+    uniforms: cuni, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `attribute float rank; attribute float phase; uniform float uLevel, uTime, uScale, uMaxPx, uVis[8]; varying float vA;
+      void main(){
+        vec3 p = position + 2.5 * vec3(sin(uTime * 1.3 + phase), cos(uTime * 1.1 + phase * 1.7), sin(uTime * 0.9 + phase * 2.3));
+        vA = (1.0 - smoothstep(uLevel - 0.06, uLevel, rank)) * uVis[6];
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        gl_PointSize = clamp(1.6 * uScale / -mv.z, 1.0, 22.0);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `varying float vA; void main(){ float d = length(gl_PointCoord - 0.5); if (d > 0.5 || vA < 0.01) discard;
+        gl_FragColor = vec4(vec3(1.0, 0.31, 0.69) * vA * 1.4 * smoothstep(0.5, 0.0, d), 1.0); }`,
+  });
+  scene.add(new THREE.Points(cgeo, cmat));
+
+  /* anatomy: glassy outlines of the brain and the smell pathway */
+  const shellMat = (hex, strength, pw) => new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: new THREE.Color(hex) }, uStrength: { value: strength }, uPow: { value: pw }, uShow: { value: 1 } },
+    transparent: true, depthWrite: false, depthTest: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+    vertexShader: `varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `uniform vec3 uColor; uniform float uStrength, uPow, uShow; varying vec3 vN; varying vec3 vV;
+      void main(){ float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), uPow); gl_FragColor = vec4(uColor * f * uStrength * uShow, 1.0); }`,
+  });
+  const shells = [];
+  const addMesh = (name, mat) => {
+    const m = B.meshes[name]; if (!m) return;
+    const vq = u16(B["mv_" + name]), f = u16(B["mf_" + name]), v = new Float32Array(m.nv * 3);
+    for (let i = 0; i < m.nv; i++) toW(vq, i, v, i * 3);
+    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(v, 3)); g.setIndex(new THREE.BufferAttribute(f, 1));
+    g.computeVertexNormals();
+    const mesh = new THREE.Mesh(g, mat); mesh.renderOrder = -1; scene.add(mesh); shells.push(mat);
+  };
+  addMesh("BRAIN", shellMat("#6d86c4", 0.2, 3.0));
+  const mbMat = shellMat("#57e08a", 0.32, 2.6), alMat = shellMat("#ffb84d", 0.3, 2.6), lhMat = shellMat("#c8a6ff", 0.18, 2.8);
+  ["MB_CA", "MB_PED", "MB_VL", "MB_ML"].forEach((p) => { addMesh(p + "_L", mbMat); addMesh(p + "_R", mbMat); });
+  addMesh("AL_L", alMat); addMesh("AL_R", alMat); addMesh("LH_L", lhMat); addMesh("LH_R", lhMat);
+
+  /* post-processing: bloom makes active cells and dopamine glow */
+  let composer = null, bloom = null;
+  if (THREE.EffectComposer && THREE.UnrealBloomPass) {
+    composer = new THREE.EffectComposer(renderer);
+    composer.addPass(new THREE.RenderPass(scene, camera));
+    bloom = new THREE.UnrealBloomPass(new THREE.Vector2(512, 512), 0.65, 0.5, 0.82);
+    composer.addPass(bloom);
+  }
+
+  /* camera */
+  let controls = null;
+  if (THREE.OrbitControls) {
+    controls = new THREE.OrbitControls(camera, canvas);
+    Object.assign(controls, { enableDamping: true, dampingFactor: 0.07, rotateSpeed: 0.55, zoomSpeed: 0.8, panSpeed: 0.7,
+      screenSpacePanning: true, minDistance: 25, maxDistance: 3000, autoRotate: false, autoRotateSpeed: 0.3 });
+    controls.addEventListener("start", () => { tween = null; tour.userMoved(); });
+  }
+  const target = controls ? controls.target : new THREE.Vector3();
+  const lay = { brainDist: 1300, overlay: true };
+  function size() {
+    const r = canvas.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, QUALITY[quality].dpr);
+    renderer.setPixelRatio(dpr); renderer.setSize(r.width, r.height, false);
+    if (composer) { composer.setPixelRatio(dpr); composer.setSize(r.width, r.height); }
+    camera.aspect = r.width / Math.max(1, r.height);
+    lay.overlay = r.width > 900;
+    const padL = lay.overlay ? 400 : 0, padB = lay.overlay ? 170 : 0;
+    if (lay.overlay) camera.setViewOffset(r.width, r.height, -padL / 2 + 10, padB / 2 - 10, r.width, r.height);
+    else camera.clearViewOffset();
+    camera.updateProjectionMatrix();
+    const k = 2 * Math.tan((camera.fov * Math.PI) / 360);
+    uni.uScale.value = (r.height * dpr) / k; uni.uMaxPx.value = 64 * dpr;
+    const fw = Math.max(200, r.width - padL - 40), fh = Math.max(200, r.height - padB - 40);
+    lay.brainDist = Math.max((860 * r.height) / (k * fw), (400 * r.height) / (k * fh));
+  }
+  new ResizeObserver(size).observe(canvas); size();
+  const dirFrom = (az, el) => new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
+  camera.position.copy(dirFrom(-0.5, 0.25).multiplyScalar(lay.brainDist * 1.6)); camera.lookAt(target);
+
+  let tween = null;
+  const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+  function flyTo(to, dist, dir, dur = 2200) {
+    const d = (dir || camera.position.clone().sub(target).normalize()).clone().normalize();
+    tween = { t0: performance.now(), dur: reduceMotion ? 1 : dur, fromT: target.clone(), toT: to.clone(),
+      fromP: camera.position.clone(), toP: to.clone().add(d.multiplyScalar(dist)) };
+  }
+  const VIEWS = { brain: () => [new THREE.Vector3(), lay.brainDist], mb: () => [A.mb, 430], g5: () => [A.g5R, 150] };
+  document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => {
+    const [to, dist] = VIEWS[b.dataset.view](); flyTo(to, dist, null, 1500);
+    document.querySelectorAll("[data-view]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  }));
+
+  /* layers */
+  const chBox = $("chs");
+  function buildChannels() {
+    chBox.replaceChildren(...CHANNELS.map((ch) => {
+      const lab = document.createElement("label"); lab.className = "ch"; lab.style.color = ch.color;
+      const inp = document.createElement("input"); inp.type = "checkbox"; inp.id = "ch-" + ch.id; inp.dataset.id = ch.id;
+      inp.checked = ch.id === "w" ? uni.uWireVis.value > 0 : ch.id === "s" ? shells[0].uniforms.uShow.value > 0 : uni.uVis.value[+ch.id] > 0;
+      inp.addEventListener("change", () => {
+        const v = inp.checked ? 1 : 0;
+        if (ch.id === "w") uni.uWireVis.value = v;
+        else if (ch.id === "s") shells.forEach((m) => { m.uniforms.uShow.value = v; });
+        else uni.uVis.value[+ch.id] = v;
+      });
+      const sw = document.createElement("span"); sw.className = "sw";
+      const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = T("ch." + ch.id);
+      const ct = document.createElement("span"); ct.className = "ct";
+      ct.textContent = ch.id === "w" ? (2556).toLocaleString(lang) : ch.id === "s" ? "13" : (B.counts[ch.id] || 0).toLocaleString(lang);
+      lab.append(inp, sw, nm, ct); return lab;
+    }));
+  }
+
+  /* labels anchored in 3D */
+  const tagBox = $("tags"), proj = new THREE.Vector3();
+  const liveTag = document.createElement("div"); liveTag.className = "tag3d live"; tagBox.appendChild(liveTag);
+  let stepTags = [], hideLive = false;
+  function setStepTags(list) {
+    hideLive = (list || []).some(([key]) => key === "g5R");
+    stepTags.forEach((t) => t.el.remove());
+    stepTags = (list || []).map(([key, word]) => {
+      const el = document.createElement("div"); el.className = "tag3d"; el.textContent = T(word); tagBox.appendChild(el);
+      return { el, p: key === "pam" ? pamR : A[key] };
+    });
+  }
+  function place(el, p) {
+    proj.copy(p).project(camera);
+    const r = canvas.getBoundingClientRect();
+    const x = (proj.x + 1) / 2 * r.width, y = (1 - proj.y) / 2 * r.height;
+    const ok = proj.z < 1 && x > 10 && x < r.width - 200 && y > 16 && y < r.height - 16;
+    el.style.opacity = ok ? "1" : "0";
+    if (ok) el.style.transform = `translate(${x + 14}px, ${y}px) translate(0, -50%)`;
+  }
+
+  G.ok = true;
+  G.flyTo = flyTo; G.dirFrom = dirFrom; G.A = A; G.pamR = pamR; G.lay = lay; G.setStepTags = setStepTags; G.buildChannels = buildChannels;
+  G.controls = controls; G.resize = size;
+  buildChannels();
+  G.frame = (now) => {
+    if (tween) {
+      const f = Math.min(1, (now - tween.t0) / tween.dur), e = ease(f);
+      target.lerpVectors(tween.fromT, tween.toT, e); camera.position.lerpVectors(tween.fromP, tween.toP, e);
+      if (f >= 1) tween = null;
+    }
+    if (controls) controls.update(); else camera.lookAt(target);
+    const dist = camera.position.distanceTo(target);
+    uni.uFogNear.value = dist * 0.55; uni.uFogFar.value = dist * 2.8;
+    uni.uTime.value = now / 1000;
+    if (state.run) {
+      const s = at(state.t);
+      const wv = Math.min(2.2, Math.max(0.12, 1 + 3 * (s.w - 1)));        // brightness exaggerates the change ~3x
+      uni.uOdour.value = s.odour ? 1 : 0;
+      uni.uDan.value = s.daOn ? 0.35 + 0.65 * s.gain : 0;
+      uni.uDanRate.value = state.daRate;
+      uni.uWire.value = wv;
+      uni.uMbon.value = s.odour ? 0.9 * wv : 0.12;
+      cuni.uLevel.value = Math.min(1, s.c / 0.9);
+      liveTag.replaceChildren(document.createTextNode(T("tag.live") + " · "),
+        Object.assign(document.createElement("b"), { textContent: `${num(s.c, 2)} µM` }),
+        document.createTextNode(` · ${T("tl.w")} ${Math.round(s.w * 100)}%`));
+      liveTag.hidden = hideLive; if (!hideLive) place(liveTag, A.g5R);
+    }
+    stepTags.forEach((t) => place(t.el, t.p));
+    if (composer) composer.render(); else renderer.render(scene, camera);
+  };
+}
+
+/* ================================================================ guided tour */
+const STEPS = [
+  { view: () => [new THREE.Vector3(), G.lay.brainDist], az: -0.45, el: 0.22, t: -3, speed: 1, rotate: true, tags: [] },
+  { view: () => [G.A.alR.clone().lerp(G.A.caR, 0.35), 330], az: -0.75, el: 0.18, t: -3, speed: 1, tags: [["alR", "tag.al"], ["caR", "tag.mb"]] },
+  { view: () => [G.A.mb, 360], az: -0.6, el: 0.35, t: -0.5, speed: 0.55, tags: [["caR", "tag.ca"], ["pedR", "tag.ped"], ["g5R", "tag.g5"]] },
+  { view: () => [G.A.pedR.clone().lerp(G.A.g5R, 0.55), 220], az: -1.05, el: 0.25, t: 0.0, speed: 0.4, tags: [["mbonR", "tag.mbon"], ["g5R", "tag.g5"]] },
+  { view: () => [G.A.g5R, 120], az: -0.35, el: 0.12, t: 0.3, speed: 0.35, tags: [["pam", "tag.pam"]] },
+  { view: () => [G.A.g5R, 95], az: 0.25, el: 0.3, t: 2.6, speed: 0.3, tags: [["mbonR", "tag.mbon"]] },
+  { view: () => [G.A.mb, 470], az: -0.4, el: 0.28, t: -1.5, speed: 1, tags: [], last: true },
+];
+const STEP_MS = 12000;
+const tour = {
+  i: 0, on: true, t0: 0, paused: false,
+  start() { resetParams(); this.on = true; $("stage").classList.add("touring"); this.go(0); },
+  go(i) {
+    this.i = Math.max(0, Math.min(STEPS.length - 1, i)); this.t0 = performance.now(); this.paused = false;
+    const st = STEPS[this.i], words = T("steps")[this.i];
+    $("tour-step").textContent = `${this.i + 1} / ${STEPS.length}`;
+    $("tour-title").textContent = words[0]; $("tour-body").textContent = words[1];
+    $("tour-next").textContent = T(st.last ? "tour.try" : "tour.next");
+    $("tour-back").disabled = this.i === 0;
+    if (G.ok) {
+      const [to, dist] = st.view(); G.flyTo(to, dist, G.dirFrom(st.az, st.el), this.i === 0 ? 3200 : 2400);
+      G.setStepTags(st.tags);
+      if (G.controls) { G.controls.autoRotate = !!st.rotate && !reduceMotion; }
+    }
+    state.t = st.t; state.speed = st.speed; setPlaying(true);
+  },
+  next() { if (STEPS[this.i].last) this.end(); else this.go(this.i + 1); },
+  end() {
+    this.on = false; $("stage").classList.remove("touring"); state.speed = 1; state.t = restartAt(); setPlaying(true);
+    if (G.ok) { G.setStepTags([]); if (G.controls) G.controls.autoRotate = false; }
+  },
+  userMoved() { if (this.on) this.paused = true; if (G.controls) G.controls.autoRotate = false; },
+  tick(now) {
+    if (!this.on) return;
+    const f = this.paused || reduceMotion ? 0 : (now - this.t0) / STEP_MS;
+    $("tour-bar").style.width = (this.paused || reduceMotion ? 0 : Math.min(100, f * 100)) + "%";
+    if (f >= 1) { if (STEPS[this.i].last) this.t0 = now; else this.next(); }
+  },
+};
+$("tour-next").addEventListener("click", () => tour.next());
+$("tour-back").addEventListener("click", () => tour.go(tour.i - 1));
+$("tour-skip").addEventListener("click", () => tour.end());
+$("tourbtn").addEventListener("click", () => tour.start());
+document.querySelector(".tourcard").addEventListener("pointerenter", () => { tour.paused = true; });
+
+/* ================================================================ language */
+function listInto(id, items) { $(id).replaceChildren(...items.map((x) => { const li = document.createElement("li"); li.textContent = x; return li; })); }
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = T(el.dataset.t); });
+  $("langbtn").textContent = lang === "ru" ? "EN" : "RU";
+  $("qualbtn").textContent = T(quality === "eco" ? "q.eco" : "q.high");
+  listInto("real-list", T("real")); listInto("drawn-list", T("drawn"));
+  buildDrugChips(); renderReadouts(); setPlaying(state.playing);
+  if (G.ok) G.buildChannels();
+  if (tour.on) { const words = T("steps")[tour.i]; $("tour-title").textContent = words[0]; $("tour-body").textContent = words[1];
+    $("tour-next").textContent = T(STEPS[tour.i].last ? "tour.try" : "tour.next"); if (G.ok) G.setStepTags(STEPS[tour.i].tags); }
+  drawCurve();
+}
+$("qualbtn").addEventListener("click", () => {
+  quality = quality === "eco" ? "high" : "eco";
+  try { localStorage.setItem("quality", quality); } catch (e) { /* storage unavailable: keep the choice for this visit */ }
+  $("qualbtn").textContent = T(quality === "eco" ? "q.eco" : "q.high");
+  if (G.resize) G.resize();
+});
+$("langbtn").addEventListener("click", () => {
+  lang = lang === "ru" ? "en" : "ru";
+  try { localStorage.setItem("lang", lang); } catch (e) { /* storage unavailable: keep the choice for this visit */ }
+  applyLang();
+});
+
+/* ================================================================ loop */
+let last = performance.now(), stageVisible = true, belowVisible = true;
+if ("IntersectionObserver" in window) {
+  const seen = new Set(["stage"]);
+  const io = new IntersectionObserver((es) => {
+    es.forEach((e) => (e.isIntersecting ? seen.add(e.target.id) : seen.delete(e.target.id)));
+    stageVisible = seen.has("stage"); belowVisible = seen.has("traces") || seen.has("cut");
+  }, { rootMargin: "100px" });
+  ["stage", "traces", "cut"].forEach((id) => io.observe($(id)));
+}
+let lastDraw = 0;
+function loop(now) {
+  requestAnimationFrame(loop);
+  if (now - lastDraw < 1000 / QUALITY[quality].fps - 2) return;
+  lastDraw = now;
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  if (state.playing && state.run) { state.t += dt * state.speed; if (state.t > VIEW1) state.t = tour.on ? STEPS[tour.i].t : restartAt(); }
+  tour.tick(now);
+  if (stageVisible) { drawTimeline(); if (G.ok) G.frame(now); }
+  if (belowVisible) { drawTraces(); drawCut(); }
+}
+recompute(); recomputeCurve(); initBrain(); applyLang(); tour.start();
+if (reduceMotion) { setPlaying(false); state.t = 3; }
+requestAnimationFrame(loop);
+addEventListener("resize", drawCurve);
+})();
+</script>
