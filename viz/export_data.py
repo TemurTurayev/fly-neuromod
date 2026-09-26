@@ -9,94 +9,197 @@ Usage::
 
     uv run --with trimesh python viz/export_data.py
 """
-import sys, base64, json, io, zipfile, pathlib, urllib.request
-import numpy as np, pandas as pd, trimesh
+
+from __future__ import annotations
+
+import base64
+import io
+import json
+import logging
+import pathlib
+import urllib.request
+import zipfile
+
+import numpy as np
+import pandas as pd
+import trimesh
+
+logger = logging.getLogger(__name__)
 
 OUT = pathlib.Path(__file__).resolve().parent
 CACHE = OUT / ".cache"
-BRAIN_SURF_URL = "https://storage.googleapis.com/flywire_neuropil_meshes/whole_neuropil/brain_mesh_v141.surf/mesh/1:0:0"
-NEUROPILS_URL = "https://raw.githubusercontent.com/navis-org/fafbseg-py/master/fafbseg/data/JFRC2NP.surf.fw.zip"
+RAW = pathlib.Path("data/raw")
+BRAIN_SURF_URL = (
+    "https://storage.googleapis.com/flywire_neuropil_meshes/"
+    "whole_neuropil/brain_mesh_v141.surf/mesh/1:0:0"
+)
+NEUROPILS_URL = (
+    "https://raw.githubusercontent.com/navis-org/fafbseg-py/master/"
+    "fafbseg/data/JFRC2NP.surf.fw.zip"
+)
+NEUROPILS = [
+    f"{region}_{side}"
+    for region in ("MB_CA", "MB_PED", "MB_VL", "MB_ML", "AL", "LH")
+    for side in ("L", "R")
+]
+VOXEL_UM = (0.004, 0.004, 0.040)  # FlyWire voxel size in micrometres
+ODOUR_FRACTION = 0.10  # share of Kenyon cells the page's odour drives
+FLAG_ODOUR, FLAG_WIRED = 1, 2
+COLUMNS = ["root_id", "pos_x", "pos_y", "pos_z", "soma_x", "soma_y", "soma_z",
+           "super_class", "cell_class", "cell_type"]
 
-def fetch(url, name):
+
+def fetch(url: str, name: str) -> pathlib.Path:
+    """Download ``url`` into the cache once."""
     CACHE.mkdir(exist_ok=True)
     path = CACHE / name
     if not path.exists():
-        with urllib.request.urlopen(url, timeout=120) as r:
-            path.write_bytes(r.read())
+        with urllib.request.urlopen(url, timeout=120) as response:
+            path.write_bytes(response.read())
     return path
 
-sp = str(CACHE)
-fetch(NEUROPILS_URL, "np.zip"); fetch(BRAIN_SURF_URL, "brain_surf.bin")
-b64 = lambda arr: base64.b64encode(np.ascontiguousarray(arr).tobytes()).decode()
-a = pd.read_csv("data/raw/flywire_annotations_v783.tsv", sep="\t",
-    usecols=["root_id","pos_x","pos_y","pos_z","soma_x","soma_y","soma_z","super_class","cell_class","cell_type"], low_memory=False)
-pos = np.c_[a.pos_x*0.004, a.pos_y*0.004, a.pos_z*0.040]
-som = np.c_[a.soma_x*0.004, a.soma_y*0.004, a.soma_z*0.040]
-has = ~np.isnan(som[:,0]); S = np.where(has[:,None], som, pos)
-cat = np.zeros(len(a), np.uint8)
-cat[a.super_class.isin(["optic","visual_projection","visual_centrifugal"])] = 1
-cat[a.cell_class == "Kenyon_Cell"] = 2
-cat[a.cell_class == "DAN"] = 3
-cat[a.cell_class == "MBON"] = 4
-cat[a.cell_type.isin(["PPL101","MBON11"])] = 5
-cat[a.cell_type.isin(["PAM01","PAM15"])] = 6
-cat[a.cell_type == "MBON01"] = 7
-z = zipfile.ZipFile(f"{sp}/np.zip")
-def load_ply(name):
-    m = trimesh.load(io.BytesIO(z.read(f"{name}.ply")), file_type="ply"); return np.asarray(m.vertices)/1000, np.asarray(m.faces)
-names = ["MB_CA_L","MB_CA_R","MB_PED_L","MB_PED_R","MB_VL_L","MB_VL_R","MB_ML_L","MB_ML_R","AL_L","AL_R","LH_L","LH_R"]
-meshes = {nm: load_ply(nm) for nm in names}
-# midline from paired neuropils
-MID = float(np.mean([(meshes[f"{p}_L"][0].mean(0)[0] + meshes[f"{p}_R"][0].mean(0)[0]) / 2 for p in ["MB_CA","MB_PED","AL","LH"]]))
-right = S[:,0] >= MID
-raw = open(f"{sp}/brain_surf.bin","rb").read(); nv = np.frombuffer(raw[:4],"<u4")[0]
-bv = np.frombuffer(raw[4:4+12*nv],"<f4").reshape(-1,3).astype(np.float64)/1000; bf = np.frombuffer(raw[4+12*nv:],"<u4").reshape(-1,3)
-bm = trimesh.Trimesh(bv, bf, process=True); bm.merge_vertices()
-meshes["BRAIN"] = (np.asarray(bm.vertices), np.asarray(bm.faces))
-# real KC -> MBON01 wiring; KCs connect ipsilaterally, so a KC's side is its own
-c = pd.read_parquet("data/raw/Connectivity_783.parquet", columns=["Presynaptic_ID","Postsynaptic_ID"])
-mb_ids = a.loc[a.cell_type=="MBON01","root_id"].tolist()
-e = c[c.Postsynaptic_ID.isin(mb_ids)]
-rid2idx = pd.Series(a.index.values, index=a.root_id)
-pre_idx = rid2idx.reindex(e.Presynaptic_ID).values
-flags = np.zeros(len(a), np.uint8)
-rng = np.random.default_rng(7)
-flags[(cat==2) & (rng.random(len(a)) < 0.10)] |= 1                  # the Kenyon cells this odour drives
-kc_in = np.unique(pre_idx[~np.isnan(pre_idx)].astype(int)); kc_in = kc_in[cat[kc_in]==2]
-flags[kc_in] |= 2                                                    # wired to MBON-gamma5
-mbon_side = {}
-for mid_ in mb_ids:
-    pres = rid2idx.reindex(e.loc[e.Postsynaptic_ID==mid_,"Presynaptic_ID"]).dropna().astype(int).values
-    pres = pres[cat[pres]==2]; mbon_side[mid_] = int(right[pres].mean() > 0.5)
-print("MID", round(MID,1), "wired KCs L/R", int((flags[~right]&2>0).sum()), int((flags[right]&2>0).sum()),
-      "odour&wired", int(((flags&3)==3).sum()), "mbon sides", list(mbon_side.values()))
-def g5_point(v):
-    d = np.abs(v[:,0]-MID); med = v[d <= np.quantile(d, 0.2)]
-    return med[med[:,2] <= np.median(med[:,2])].mean(0)
-def junction(v):
-    d = np.abs(v[:,0]-MID); return v[d >= np.quantile(d, 0.85)].mean(0)
-anch = {}
-for s in ("L","R"):
-    ml = meshes[f"MB_ML_{s}"][0]
-    anch[f"g5{s}"] = g5_point(ml); anch[f"jn{s}"] = junction(ml)
-    for p, key in (("MB_PED","ped"),("AL","al"),("MB_CA","ca"),("LH","lh")): anch[f"{key}{s}"] = meshes[f"{p}_{s}"][0].mean(0)
-for mid_, sd in mbon_side.items():
-    anch["mbon" + ("R" if sd else "L")] = S[rid2idx[mid_]]
-anch["mb"] = np.mean([anch["g5L"], anch["g5R"], anch["caL"], anch["caR"]], axis=0)
-print({k: np.round(v,0).tolist() for k, v in anch.items()})
-allv = np.vstack([S, pos[~np.isnan(pos[:,0])]] + [v for v, f in meshes.values()])
-lo, hi = allv.min(0), allv.max(0)
-Q = lambda x: np.round((x-lo)/(hi-lo)*65535).astype("<u2")
-A = np.where(np.linalg.norm(pos-S,axis=1)[:,None] > 3, pos, S)
-order = np.argsort(cat, kind="stable")
-meta = {"n": int(len(a)), "lo": lo.round(3).tolist(), "hi": hi.round(3).tolist(), "mid": round(MID,2),
-        "counts": {int(k): int(v) for k, v in zip(*np.unique(cat, return_counts=True))},
-        "anchors": {k: np.asarray(v).round(2).tolist() for k, v in anch.items()},
-        "wired": int((flags&2>0).sum()), "meshes": {}}
-data = {"soma": b64(Q(S[order])), "arbor": b64(Q(A[order])), "cat": b64(cat[order]), "flags": b64(flags[order])}
-for k, (v, f) in meshes.items():
-    data[f"mv_{k}"] = b64(Q(v)); data[f"mf_{k}"] = b64(f.astype("<u2"))
-    meta["meshes"][k] = {"nv": int(len(v)), "nf": int(len(f))}
-js = "window.BRAIN=" + json.dumps(meta) + ";\n" + "".join(f"window.BRAIN.{k}='{v}';\n" for k, v in data.items())
-open(OUT / "brain.js", "w").write(js)
-print("brain.js", round(len(js)/1e6,2), "MB")
+
+def b64(array: np.ndarray) -> str:
+    return base64.b64encode(np.ascontiguousarray(array).tobytes()).decode()
+
+
+def categories(a: pd.DataFrame) -> np.ndarray:
+    """Draw category of every neuron; later rules win."""
+    cat = np.zeros(len(a), np.uint8)
+    cat[a.super_class.isin(["optic", "visual_projection", "visual_centrifugal"])] = 1
+    cat[a.cell_class == "Kenyon_Cell"] = 2
+    cat[a.cell_class == "DAN"] = 3
+    cat[a.cell_class == "MBON"] = 4
+    cat[a.cell_type.isin(["PPL101", "MBON11"])] = 5
+    cat[a.cell_type.isin(["PAM01", "PAM15"])] = 6
+    cat[a.cell_type == "MBON01"] = 7
+    return cat
+
+
+def load_neuropils(path: pathlib.Path) -> dict[str, tuple[np.ndarray, np.ndarray]]:
+    """Named neuropil meshes, vertices in micrometres."""
+    meshes = {}
+    with zipfile.ZipFile(path) as archive:
+        for name in NEUROPILS:
+            mesh = trimesh.load(io.BytesIO(archive.read(f"{name}.ply")), file_type="ply")
+            meshes[name] = (np.asarray(mesh.vertices) / 1000, np.asarray(mesh.faces))
+    return meshes
+
+
+def load_brain_outline(path: pathlib.Path) -> tuple[np.ndarray, np.ndarray]:
+    """Neuroglancer legacy mesh fragment: vertex count, float32 xyz, uint32 faces."""
+    raw = path.read_bytes()
+    n_vertices = int(np.frombuffer(raw[:4], "<u4")[0])
+    end = 4 + 12 * n_vertices
+    vertices = np.frombuffer(raw[4:end], "<f4").reshape(-1, 3).astype(np.float64) / 1000
+    faces = np.frombuffer(raw[end:], "<u4").reshape(-1, 3)
+    mesh = trimesh.Trimesh(vertices, faces, process=True)
+    mesh.merge_vertices()
+    return np.asarray(mesh.vertices), np.asarray(mesh.faces)
+
+
+def midline(meshes: dict[str, tuple[np.ndarray, np.ndarray]]) -> float:
+    """x of the midline, from paired neuropils (the point cloud is asymmetric)."""
+    pairs = ["MB_CA", "MB_PED", "AL", "LH"]
+    return float(np.mean([
+        (meshes[f"{p}_L"][0].mean(0)[0] + meshes[f"{p}_R"][0].mean(0)[0]) / 2 for p in pairs
+    ]))
+
+
+def wiring_flags(a: pd.DataFrame, cat: np.ndarray) -> tuple[np.ndarray, list[int]]:
+    """Mark the odour-driven Kenyon cells and those wired to MBON01 (MBON-gamma5)."""
+    connections = pd.read_parquet(
+        RAW / "Connectivity_783.parquet", columns=["Presynaptic_ID", "Postsynaptic_ID"]
+    )
+    mbon_ids = a.loc[a.cell_type == "MBON01", "root_id"].tolist()
+    edges = connections[connections.Postsynaptic_ID.isin(mbon_ids)]
+    index_of = pd.Series(a.index.values, index=a.root_id)
+    flags = np.zeros(len(a), np.uint8)
+    rng = np.random.default_rng(7)
+    flags[(cat == 2) & (rng.random(len(a)) < ODOUR_FRACTION)] |= FLAG_ODOUR
+    pre = index_of.reindex(edges.Presynaptic_ID).dropna().astype(int).to_numpy()
+    flags[np.unique(pre[cat[pre] == 2])] |= FLAG_WIRED
+    return flags, mbon_ids
+
+
+def anchors(meshes, mid: float, soma: np.ndarray, a: pd.DataFrame, cat, mbon_ids) -> dict:
+    """Landmarks the page flies to, per hemisphere."""
+    def gamma5(v: np.ndarray) -> np.ndarray:
+        # the medial tip of the medial lobe, anterior half: an estimate of gamma5
+        d = np.abs(v[:, 0] - mid)
+        medial = v[d <= np.quantile(d, 0.2)]
+        return medial[medial[:, 2] <= np.median(medial[:, 2])].mean(0)
+
+    def junction(v: np.ndarray) -> np.ndarray:
+        d = np.abs(v[:, 0] - mid)
+        return v[d >= np.quantile(d, 0.85)].mean(0)
+
+    points = {}
+    for side in ("L", "R"):
+        medial_lobe = meshes[f"MB_ML_{side}"][0]
+        points[f"g5{side}"] = gamma5(medial_lobe)
+        points[f"jn{side}"] = junction(medial_lobe)
+        for region, key in (("MB_PED", "ped"), ("AL", "al"), ("MB_CA", "ca"), ("LH", "lh")):
+            points[f"{key}{side}"] = meshes[f"{region}_{side}"][0].mean(0)
+    # each MBON01 belongs to the side most of its Kenyon cell inputs come from
+    right = soma[:, 0] >= mid
+    connections = pd.read_parquet(
+        RAW / "Connectivity_783.parquet", columns=["Presynaptic_ID", "Postsynaptic_ID"]
+    )
+    index_of = pd.Series(a.index.values, index=a.root_id)
+    for mbon in mbon_ids:
+        inputs = connections.loc[connections.Postsynaptic_ID == mbon, "Presynaptic_ID"]
+        pre = index_of.reindex(inputs).dropna().astype(int).to_numpy()
+        pre = pre[cat[pre] == 2]
+        side = "R" if right[pre].mean() > 0.5 else "L"
+        points["mbon" + side] = soma[index_of[mbon]]
+    points["mb"] = np.mean([points["g5L"], points["g5R"], points["caL"], points["caR"]], axis=0)
+    return points
+
+
+def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    neuropil_zip = fetch(NEUROPILS_URL, "np.zip")
+    outline = fetch(BRAIN_SURF_URL, "brain_surf.bin")
+    a = pd.read_csv(RAW / "flywire_annotations_v783.tsv", sep="\t", usecols=COLUMNS,
+                    low_memory=False)
+    pos = a[["pos_x", "pos_y", "pos_z"]].to_numpy(float) * VOXEL_UM
+    soma = a[["soma_x", "soma_y", "soma_z"]].to_numpy(float) * VOXEL_UM
+    soma = np.where(np.isnan(soma[:, :1]), pos, soma)  # no soma recorded: use pos
+    cat = categories(a)
+
+    meshes = load_neuropils(neuropil_zip)
+    mid = midline(meshes)
+    meshes["BRAIN"] = load_brain_outline(outline)
+    flags, mbon_ids = wiring_flags(a, cat)
+    points = anchors(meshes, mid, soma, a, cat, mbon_ids)
+
+    everything = np.vstack([soma, pos[~np.isnan(pos[:, 0])]] + [v for v, _ in meshes.values()])
+    lo, hi = everything.min(0), everything.max(0)
+
+    def quantize(x: np.ndarray) -> np.ndarray:
+        return np.round((x - lo) / (hi - lo) * 65535).astype("<u2")
+
+    arbor = np.where(np.linalg.norm(pos - soma, axis=1)[:, None] > 3, pos, soma)
+    order = np.argsort(cat, kind="stable")
+    values, counts = np.unique(cat, return_counts=True)
+    meta = {
+        "n": len(a), "lo": lo.round(3).tolist(), "hi": hi.round(3).tolist(), "mid": round(mid, 2),
+        "counts": {int(k): int(v) for k, v in zip(values, counts, strict=True)},
+        "anchors": {k: np.asarray(v).round(2).tolist() for k, v in points.items()},
+        "wired": int(((flags & FLAG_WIRED) > 0).sum()), "meshes": {},
+    }
+    data = {"soma": b64(quantize(soma[order])), "arbor": b64(quantize(arbor[order])),
+            "cat": b64(cat[order]), "flags": b64(flags[order])}
+    for name, (vertices, faces) in meshes.items():
+        data[f"mv_{name}"] = b64(quantize(vertices))
+        data[f"mf_{name}"] = b64(faces.astype("<u2"))
+        meta["meshes"][name] = {"nv": len(vertices), "nf": len(faces)}
+    js = "window.BRAIN=" + json.dumps(meta) + ";\n"
+    js += "".join(f"window.BRAIN.{k}='{v}';\n" for k, v in data.items())
+    (OUT / "brain.js").write_text(js)
+    logger.info("brain.js: %.2f MB, %d wired Kenyon cells", len(js) / 1e6, meta["wired"])
+
+
+if __name__ == "__main__":
+    main()
